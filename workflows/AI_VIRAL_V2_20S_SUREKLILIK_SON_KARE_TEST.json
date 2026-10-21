@@ -1,0 +1,1544 @@
+{
+  "name": "AI VIRAL V2 - 20S CONTINUITY TEST (LAST FRAME)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 12,19 * * *"
+            }
+          ]
+        }
+      },
+      "id": "bd7da857-083b-4f3f-86cf-8b9a7f2c74d5",
+      "name": "01 CANLI - Gunde 2 (12/19)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Last 7 days, two broad clusters; 2 calls * 100 quota units per execution.\nconst mode=$input.first().json.mode;\nconst publishedAfter=new Date(Date.now()-7*86400000).toISOString();\nconst searches=['AI generated surreal cinematic animation shorts','AI creative transformation impossible objects 3d shorts'];\nreturn searches.map(query=>({json:{query,publishedAfter,mode}}));"
+      },
+      "id": "36406e6e-019f-4695-96e2-9ead2794e464",
+      "name": "03 YouTube arama konulari",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "part",
+              "value": "snippet"
+            },
+            {
+              "name": "type",
+              "value": "video"
+            },
+            {
+              "name": "videoDuration",
+              "value": "short"
+            },
+            {
+              "name": "publishedAfter",
+              "value": "={{ $json.publishedAfter }}"
+            },
+            {
+              "name": "q",
+              "value": "={{ $json.query }}"
+            },
+            {
+              "name": "order",
+              "value": "viewCount"
+            },
+            {
+              "name": "maxResults",
+              "value": "25"
+            },
+            {
+              "name": "safeSearch",
+              "value": "moderate"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "67956d9d-cb97-4b0a-bdd7-239a43f553ae",
+      "name": "04 YouTube yeni video ara",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        288
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "ykvaG9uzOvvotxbn",
+          "name": "Query Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ids=[...new Set($input.all().flatMap(i=>(i.json.items||[]).map(x=>x?.id?.videoId).filter(Boolean)))].slice(0,50);\nif(!ids.length)throw new Error('YouTube API bos sonuc: API key, kota ya da sorgulari kontrol et. Veri uydurmayacagiz.');\nreturn [{json:{ids:ids.join(',')}}];"
+      },
+      "id": "d029850e-b55d-421e-9a32-6a982845c0e4",
+      "name": "05 YouTube ID topla",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "part",
+              "value": "snippet,statistics,contentDetails"
+            },
+            {
+              "name": "id",
+              "value": "={{ $json.ids }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "783c7134-3a5e-4feb-b528-df37c62ce0e7",
+      "name": "06 YouTube gercek istatistik",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1216,
+        288
+      ],
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "ykvaG9uzOvvotxbn",
+          "name": "Query Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function dur(s){let a=String(s||'').match(/PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?/);return a?(+a[1]||0)*3600+(+a[2]||0)*60+(+a[3]||0):9999;}\nconst now=Date.now(); const items=$input.first().json.items||[];\nconst posts=items.map(v=>({platform:'youtube',url:v.id?'https://www.youtube.com/watch?v='+v.id:'',title:String(v.snippet?.title||'').slice(0,160),description:String(v.snippet?.description||'').slice(0,400),date:v.snippet?.publishedAt,views:Number(v.statistics?.viewCount||0),likes:Number(v.statistics?.likeCount||0),comments:Number(v.statistics?.commentCount||0),shares:0,duration:dur(v.contentDetails?.duration)})).filter(x=>x.url&&x.views>0&&x.duration<=180&&Date.parse(x.date)>now-7*86400000);\nreturn [{json:{platform:'youtube',posts,sourceCount:posts.length}}];"
+      },
+      "id": "d6c30826-382a-4c13-8c69-dd51f6d31ace",
+      "name": "07 YouTube normallestir",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/actors/clockworks~tiktok-scraper/run-sync-get-dataset-items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { searchQueries: [\"AI animation\", \"AI generated videos\", \"surreal 3d\"], searchSection:\"/video\", resultsPerPage:18, videoSearchDateFilter:\"PAST_WEEK\", videoSearchSorting:\"MOST_RELEVANT\", shouldDownloadVideos:false } }}",
+        "options": {
+          "timeout": 290000
+        }
+      },
+      "id": "eb896bbe-75b8-4318-ae03-68a460a6b32e",
+      "name": "08 TikTok yeni videolar - Apify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1712,
+        288
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "aziXEnQAdSAIrkSG",
+          "name": "Bearer Auth account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "let input=$input.all().map(o=>o.json); let rows=input.flatMap(o=>Array.isArray(o)?o:[o]);let err=rows.filter(o=>o.error);\nconst posts=rows.filter(x=>!x.error).map(x=>({platform:'tiktok',url:x.webVideoUrl||x.videoUrl||x.url||(x.id&&x.authorMeta?.name?'https://www.tiktok.com/@'+x.authorMeta.name+'/video/'+x.id:''),title:String(x.text||x.desc||x.title||'').slice(0,170),description:String(x.text||x.desc||'').slice(0,400),date:typeof x.createTime==='number'?new Date(x.createTime*1000).toISOString():(x.createTimeISO||x.createTime||x.createTimeUTC),views:Number(x.playCount??x.stats?.playCount??x.statistics?.playCount??0),likes:Number(x.diggCount??x.likes??0),comments:Number(x.commentCount??0),shares:Number(x.shareCount??0),duration:Number(x.videoMeta?.duration??x.video?.duration??0)})).filter(x=>x.url&&x.date);\nreturn [{json:{platform:'tiktok',posts,sourceCount:posts.length,errors:err.length}}];"
+      },
+      "id": "5da4c553-3a72-49cd-b0da-bf3df943cb65",
+      "name": "09 TikTok normallestir",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1968,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/actors/apify~instagram-hashtag-scraper/run-sync-get-dataset-items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {hashtags:[\"aianimation\",\"aivideo\",\"surrealart\"],resultsType:\"reels\",resultsLimit:18} }}",
+        "options": {
+          "timeout": 290000
+        }
+      },
+      "id": "bfe5ba37-d79e-469a-acab-5a8d1876717a",
+      "name": "10 Instagram reels - Apify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2224,
+        288
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "aziXEnQAdSAIrkSG",
+          "name": "Bearer Auth account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "let r=$input.all().map(x=>x.json).flatMap(x=>Array.isArray(x)?x:[x]); const errors=r.filter(x=>x.error).length;\nconst posts=r.filter(x=>!x.error).map(x=>({platform:'instagram',url:x.url||x.postUrl||x.inputUrl||(x.shortCode?'https://www.instagram.com/reel/'+x.shortCode+'/':''),title:String(x.caption||x.text||'').slice(0,170),description:String(x.caption||x.text||'').slice(0,400),date:x.timestamp||x.takenAt||x.createdAt||x.date,views:Number(x.videoViewCount??x.videoPlayCount??x.videoPlayCount??x.playCount??x.viewsCount??0),likes:Number(x.likesCount??x.likes??0),comments:Number(x.commentsCount??x.comments??0),shares:Number(x.sharesCount??x.shares??0),duration:Number(x.videoDuration??x.duration??0)})).filter(x=>x.url&&x.date);\nreturn [{json:{platform:'instagram',posts,sourceCount:posts.length,errors}}];"
+      },
+      "id": "801503f7-806c-4596-a7df-59b8fc53b5cc",
+      "name": "11 Instagram normallestir",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2464,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/actors/apidojo~tweet-scraper/run-sync-get-dataset-items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {searchTerms:[\"AI animation filter:videos -filter:retweets\", \"AI generated video filter:videos -filter:retweets\"],sort:\"Latest\",onlyVideo:true,maxItems:60,tweetLanguage:\"en\"} }}",
+        "options": {
+          "timeout": 290000
+        }
+      },
+      "id": "f990f5f8-be25-4387-8e1b-ce4c5526cd41",
+      "name": "12 X video arama - Apify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2720,
+        288
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "aziXEnQAdSAIrkSG",
+          "name": "Bearer Auth account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "let r=$input.all().map(x=>x.json).flatMap(x=>Array.isArray(x)?x:[x]);const errors=r.filter(x=>x.error).length;\nconst posts=r.filter(x=>!x.error).map(x=>({platform:'twitter',url:x.url||x.tweetUrl||(x.id&&x.author?.userName?'https://x.com/'+x.author.userName+'/status/'+x.id:''),title:String(x.fullText||x.text||'').slice(0,170),description:String(x.fullText||x.text||'').slice(0,400),date:x.createdAt||x.created_at||x.date,views:Number(x.viewCount??x.views??0),likes:Number(x.likeCount??x.favoriteCount??0),comments:Number(x.replyCount??0),shares:Number(x.retweetCount??0),duration:0,hasVideo:!!(x.isVideo||x.extendedEntities?.media?.some(m=>m.type==='video'||m.type==='animated_gif')||x.media?.some(m=>m.type==='video')||x.entities?.media?.some(m=>m.type==='video'))})).filter(x=>x.url&&x.date&&x.hasVideo);\nreturn [{json:{platform:'twitter',posts,sourceCount:posts.length,errors}}];"
+      },
+      "id": "7b8ad728-27fa-465c-aa4b-1c05d2f03417",
+      "name": "13 X normallestir",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2960,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Input is already de-duplicated by URL. Views/hour is a cumulative average, NOT measured view acceleration.\nconst sets=['07 YouTube normallestir','09 TikTok normallestir','11 Instagram normallestir','13 X normallestir'].map(n=>$(n).first().json);\nconst cutoff=Date.now()-7*86400000, now=Date.now(), seen=new Set(), all=[];\nfor(const s of sets){for(const p of s.posts||[]){let when=Date.parse(p.date);if(!Number.isFinite(when)||when<cutoff||when>now+60000||!p.url||seen.has(p.url))continue;seen.add(p.url);\nconst hours=Math.max(1,(now-when)/3600000),views=Math.max(0,+p.views||0),likes=Math.max(0,+p.likes||0),comments=Math.max(0,+p.comments||0),shares=Math.max(0,+p.shares||0);\nif(views===0&&likes===0)continue;\nconst velocity=views/hours;const eng=views>0?Math.min(.25,(likes+2*comments+3*shares)/views):0;\n// Comparable only as a rough ranking heuristic. X posts with unavailable views get a lower-confidence penalty.\nconst confidence=views>0?1:.35;\nconst score=Math.round(100*(Math.log10(velocity+1)*.7+Math.log10(likes/hours+1)*.20+Math.min(10,eng*20)*.10)*confidence);\nall.push({...p,views,likes,comments,shares,ageHours:Math.round(hours),viewsPerHour:Math.round(velocity),engagementRate:Number(eng.toFixed(4)),score,confidence:views>0?'medium':'low'});\n}}\nall.sort((a,b)=>b.score-a.score);if(!all.length)throw new Error('Son 7 gun icin GERCEK ve tarihli video verisi gelmedi. Tahmini verilerle video uretimi durduruldu.');\nconst byPlatform=Object.fromEntries(sets.map(s=>[s.platform,{items:s.sourceCount,errors:s.errors||0}]));\nconst chosen=[...all.slice(0,13)];const already=new Set(chosen.map(x=>x.url));\nfor(const platform of ['youtube','tiktok','instagram','twitter']){const best=all.filter(v=>v.platform===platform).slice(0,4);for(const item of best)if(!already.has(item.url)){already.add(item.url);chosen.push(item);}}\nchosen.sort((a,b)=>b.score-a.score);\nconst mode=$('03 YouTube arama konulari').first().json.mode;\nreturn [{json:{mode,platforms:byPlatform,candidates:chosen.slice(0,29),totalCandidates:all.length,rankingMethod:'Approx. views/age + engagements; missing view metrics penalized; not a prediction guarantee',createdAt:new Date().toISOString()}}];"
+      },
+      "id": "6a1e4942-21c5-491a-b7d3-a0de320375fc",
+      "name": "14 Gercek trend puanla + top adaylar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3216,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst x = $input.first().json;\n\nconst store = $getWorkflowStaticData('global');\nconst used = Array.isArray(store.published)\n  ? store.published.slice(-35)\n  : [];\n\nconst prompt = `ROLE: You are an evidence-driven cross-platform short-form video analyst and original film director.\n\nMISSION: From the provided recently published real YouTube, TikTok, Instagram and X video metadata, identify the strongest VISUAL FORMAT for a NEW original short film. Do not republish or paraphrase anyone's original exact footage. Never claim you watched the actual videos; you only have metadata and metrics.\n\nIMPORTANT: Data has been normalized with heuristic views / elapsed hours. Platform view counts are not strictly comparable, and X may lack views. Do not invent dates, engagement, views or URLs. Evaluate freshness, momentum proxy, engagement, recognizability, novel hook and four-part 20-second production feasibility. Avoid repeatedly choosing glass fruit, knives, obsidian balls, ASMR or other motifs unless justified. No copyrighted characters, logos, famous people, impersonation or third-party footage.\n\nCreate ONE cohesive, ORIGINAL 20-second micro-story told as FOUR DISTINCT FIVE-SECOND 9:16 cinematic AI video shots, later concatenated in order. Clip 1 is rendered from text. For clips 2-4, the PREVIOUS CLIP LAST FRAME is provided as the image input to an image-to-video model. Preserve exactly the same character, object identity, setting, costume, colors, camera geometry and lighting from the previous frame. NEVER introduce an unrelated scene or new main subject. Do not reset the visual world. Prompts should narrate the next 5 seconds of motion starting precisely at the reference last frame; no hard cuts. Do not summarize all four beats in one scene. Put memorable hook in clip 1, escalating action in clip 2, a visually surprising twist in clip 3, and satisfying payoff / optional seamless loop in clip 4. Prefer interesting camera changes and evolving action, not the same repeated scene. Each clip targets 5 seconds, video only: no visible text, copyrighted designs, watermarks, brands, celebrities, dialogue, subtitles, or assumed audio. Cinematic photorealistic AI animation, vertically composed for 9:16. The output must clearly disclose AI-generated visuals in metadata.\n\nReturn ONLY valid JSON with these keys:\n{\"concept\":\"English title\",\"category\":\"category name e.g. fantasy/3D/illusion\",\"why\":\"evidence and uncertainties in under 80 words\",\"selectedSourceUrl\":\"one URL exactly from candidates\",\"sourceUrls\":[\"up to 3 URLs drawn exactly from candidates\"],\"scenePrompts\":[\"English 5-second shot 1 HOOK with precise repeated subject/location and camera details\",\"English 5-second shot 2 BUILD with same subject/location details and new action\",\"English 5-second shot 3 TWIST with same subject/location details and surprising action\",\"English 5-second shot 4 FINALE with same subject/location details and resolution\"],\"youtubeTitle\":\"catchy English title ending #shorts\",\"youtubeDescription\":\"1-2 sentences, naturally mentions AI-generated visual\",\"hashtags\":[\"5 to 8 short lowercase words without #\"]}\nAll four scenePrompts must be detailed and independently renderable, each 110-170 words maximum. Exactly four prompts; not a nested JSON object; no extra keys. Use visual actions achievable in five seconds. Source videos only inspire formats; do not copy anyone's footage.\n\nDo not reuse recent published concepts: ${JSON.stringify(used.map(x => x.concept))}\nSource health: ${JSON.stringify(x.platforms)}\nCandidate data: ${JSON.stringify(x.candidates.slice(0,24))}`;\n\nreturn [{\n  json: {\n    body: {\n      contents: [\n        {\n          role: 'user',\n          parts: [{ text: prompt }]\n        }\n      ],\n      generationConfig: {\n        responseMimeType: 'application/json',\n        maxOutputTokens: 3900\n      }\n    }\n  }\n}];"
+      },
+      "id": "aace6b05-cfdf-4ac6-b628-a40c5618a8c8",
+      "name": "15 Gemini AI viral strateji istegi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3472,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.body }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "699f05f0-f481-4aaa-b964-a3f6252881ce",
+      "name": "16 Gemini 3.8 Flash",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3712,
+        288
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "JUg6wtJE9fei19P7",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw=$input.first().json?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';\nif(!raw.trim())throw new Error('Gemini bos dondu; modeli veya kotayi kontrol edin');\nlet o;try{o=JSON.parse(raw.replace(/^```json\\s*/i,'').replace(/```$/,'').trim())}catch(e){throw new Error('Gemini JSON gecersiz: '+raw.slice(0,240))}\nconst c=$('14 Gercek trend puanla + top adaylar').first().json.candidates;const urls=new Set(c.map(x=>x.url));\nif(!o.concept || !Array.isArray(o.scenePrompts) || o.scenePrompts.length !== 4 || o.scenePrompts.some(p => typeof p !== 'string' || p.trim().length < 90)) throw new Error('Gemini dort baglantili 5sn sahne promptu uretmedi. Ucretli video istekleri baslatilmadi.');\nif(!urls.has(o.selectedSourceUrl))throw new Error('Gemini kaynak URL uydurdu veya girdi disi secim yapti');\no.sourceUrls=(Array.isArray(o.sourceUrls)?o.sourceUrls:[]).filter(u=>urls.has(u)).slice(0,3);\no.youtubeTitle=String(o.youtubeTitle||o.concept).slice(0,88);o.youtubeDescription=String(o.youtubeDescription||'AI-generated animation.').slice(0,1200);\no.hashtags=(Array.isArray(o.hashtags)?o.hashtags:[]).slice(0,8).map(x=>String(x).replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()).filter(Boolean);\no.scenePrompts=o.scenePrompts.map(s=>s.trim().slice(0,3000));\nreturn [{json:o}];"
+      },
+      "id": "ac17295d-74da-4177-a4bd-13b7f8769ba1",
+      "name": "17 Gemini JSON dogrula",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3984,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.image_url ? \"https://queue.fal.run/fal-ai/wan/v2.2-5b/image-to-video\" : \"https://queue.fal.run/fal-ai/wan/v2.2-5b/text-to-video/fast-wan\" }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.image_url ? ({ image_url: $json.image_url, prompt: $json.videoPrompt, aspect_ratio:\"9:16\", resolution:\"720p\", num_frames:121, frames_per_second:24, interpolator_model:\"none\", video_quality:\"high\", enable_safety_checker:true }) : ({ prompt:$json.videoPrompt, aspect_ratio:\"9:16\", resolution:\"720p\", video_quality:\"high\", enable_safety_checker:true }) }}",
+        "options": {}
+      },
+      "id": "70515b3b-be02-4feb-b4bb-2c347dfbf062",
+      "name": "18 Video uret (ilk FastWan, devam I2V)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4800,
+        400
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "o6bNPgbtmM2mYZw2",
+          "name": "Header Auth account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "id": "77df0017-840a-430e-827a-50a05fc476d4",
+      "name": "19 Bekle 30 saniye",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        5060,
+        400
+      ],
+      "webhookId": "ccd4f807-6025-480e-b744-c8d3805addf0"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "44cf2c02-67ec-4217-935d-67b9e1ecc8dd",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "COMPLETED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d4936f33-2ffa-4f52-a52e-5454ba95905d",
+      "name": "21 Video tamam mi?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5560,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "45db8661-a9a6-429f-b619-8a3af60b8dd4",
+              "leftValue": "={{ [\"IN_QUEUE\",\"IN_PROGRESS\"].includes($json.status) && $runIndex < 72 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "658b8d86-603c-48b2-b981-344ee3a52f04",
+      "name": "22 Tekrar kontrol et (toplam max72)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5800,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "errorMessage": "FastWan basarisiz oldu veya zaman asimi yasandi. Yeni POST yapmadan once fal.ai panelinden eski istegi kontrol edin."
+      },
+      "id": "809f68e6-5dc3-443d-bec4-c35d9f593374",
+      "name": "23 Video uretimi bitti / HATA",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        6060,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.response_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "e5527541-07cb-4301-b771-21f17f1f918a",
+      "name": "24 Hazir MP4 URL al",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5800,
+        260
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "o6bNPgbtmM2mYZw2",
+          "name": "Header Auth account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst video = $input.first().json;\n\nconst videoUrl =\n  video.video?.url ||\n  video.videoUrl ||\n  video.url;\n\nif (!videoUrl) {\n  throw new Error(\"Video URL bulunamadi!\");\n}\n\nfunction getNodeData(names) {\n  for (const name of names) {\n    try {\n      return $(name).first().json;\n    } catch (e) {}\n  }\n\n  throw new Error(\n    \"Dugum bulunamadi: \" + names.join(\" / \")\n  );\n}\n\nconst g = getNodeData([\n  \"17 Gemini JSON dogrula\",\n  \"17 Gemini JSON doğrula\"\n]);\n\nconst rank = getNodeData([\n  \"14 Gercek trend puanla + top adaylar\",\n  \"14 Gerçek trend puanla + top adaylar\"\n]);\n\n// Manuel testte preview, otomatikte live\nconst mode =\n  $execution.mode === \"production\"\n    ? \"live\"\n    : \"preview\";\n\n// Gemini baslik ve aciklama\nconst title =\n  g.youtubeTitle ||\n  g.title ||\n  \"AI Viral Short #shorts\";\n\nconst baseDescription = String(\n  g.youtubeDescription ||\n  g.description ||\n  \"AI-generated visuals.\"\n).trim();\n\n// Hashtagler\nconst hashtags = Array.isArray(g.hashtags)\n  ? g.hashtags\n      .map(t => String(t).replace(/^#/, \"\").trim())\n      .filter(Boolean)\n  : [];\n\nconst missingTags = hashtags.filter(\n  t => !baseDescription.includes(\"#\" + t)\n);\n\nconst description =\n  baseDescription +\n  (missingTags.length\n    ? \"\\n\\n\" +\n      missingTags.map(t => \"#\" + t).join(\" \")\n    : \"\");\n\n// Kaynak bilgileri\nconst candidates =\n  Array.isArray(rank.candidates)\n    ? rank.candidates\n    : [];\n\nconst candidateUrls = candidates\n  .map(c => c.url)\n  .filter(Boolean);\n\nconst selectedSourceUrl =\n  g.selectedSourceUrl ||\n  g.sourceUrl ||\n  g.sourceUrls?.[0] ||\n  candidateUrls[0] ||\n  \"\";\n\nconst sourceUrls =\n  Array.isArray(g.sourceUrls) &&\n  g.sourceUrls.length\n    ? g.sourceUrls\n    : [\n        selectedSourceUrl,\n        ...candidateUrls.filter(\n          u => u !== selectedSourceUrl\n        )\n      ].filter(Boolean).slice(0, 3);\n\n// YouTube icin hazir cikti\nreturn [\n  {\n    json: {\n      mode,\n      createdAt: new Date().toISOString(),\n      videoUrl,\n      selectedSourceUrl,\n      sourceUrls,\n      concept: g.concept || \"\",\n      category: g.category || \"\",\n      why: g.why || \"\",\n      title,\n      description,\n      hashtags\n    }\n  }\n];"
+      },
+      "id": "dafd21f6-cb3e-4604-9f72-613eabcc3789",
+      "name": "25 Video + telifsiz metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6810,
+        -320
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "572e8a32-da03-4d63-b56c-d6a0bf75f33f",
+              "leftValue": "={{ $json.mode === \"live\" }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a5922708-2d93-468c-9eed-c2dbf425b16c",
+      "name": "26 Otomatik yayin mi?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        7070,
+        -320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const v=$input.first().json;return [{json:{status:'preview_only_not_published',videoUrl:v.videoUrl,title:v.title,concept:v.concept,sourceUrls:v.sourceUrls,why:v.why,note:'20sn test. Manuel calistirmada YouTube yuklemesi engellenir; uretim 4x FastWan kredi tuketebilir.'}}];"
+      },
+      "id": "3bc21ce4-601a-4998-8c9b-b178e16d4a2e",
+      "name": "27 ONIZLEME - PAYLASILMADI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7340,
+        -90
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{mode:$execution.mode === 'production' ? 'live' : 'preview', executionMode:$execution.mode}}];"
+      },
+      "id": "70158584-fe35-45dc-8c69-1b3285843daf",
+      "name": "02 Guvenli mod - testte yayinlama yok",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('25 Video + telifsiz metadata').first().json.videoUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "1ddc7c8f-2a10-42d8-9bb2-0ad2564b4baa",
+      "name": "28 Download MP4 for YouTube",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7360,
+        -430
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{ $('25 Video + telifsiz metadata').first().json.title }}",
+        "regionCode": "TR",
+        "categoryId": "={{ '22' }}",
+        "options": {
+          "description": "={{ $('25 Video + telifsiz metadata').first().json.description }}",
+          "notifySubscribers": false,
+          "privacyStatus": "private",
+          "selfDeclaredMadeForKids": false
+        }
+      },
+      "id": "1431d4b1-eb1f-4112-97af-9af224f794a4",
+      "name": "29 YouTube OAuth Upload PRIVATE",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        7600,
+        -430
+      ],
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "zkYy6CFjoanduQW1",
+          "name": "YouTube account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst data = $input.first().json;\nconst id = data.id || data.uploadId;\n\nif (!id) {\n  throw new Error('YouTube video ID bulunamadi');\n}\n\nconst visibility = data.status?.privacyStatus;\n\nif (visibility !== 'private') {\n  throw new Error(\n    'Test videosu gizli olarak dogrulanamadi. ' +\n    'YouTube Studio uzerinden kontrol et.'\n  );\n}\n\nconst video = $('25 Video + telifsiz metadata').first().json;\n\n// Yayimlanan video fikirlerini kaydet\nconst store = $getWorkflowStaticData('global');\nconst history = Array.isArray(store.published)\n  ? store.published\n  : [];\n\nif (!history.some(item => item.youtubeVideoId === id)) {\n  history.push({\n    youtubeVideoId: id,\n    concept: video.concept,\n    title: video.title,\n    createdAt: new Date().toISOString()\n  });\n}\n\nstore.published = history.slice(-100);\n\nreturn [{\n  json: {\n    status: 'uploaded_private_review',\n    youtubeVideoId: id,\n    videoUrl: 'https://www.youtube.com/watch?v=' + id,\n    concept: video.concept,\n    visibility: 'private',\n    aiDisclosure: true\n  }\n}];"
+      },
+      "id": "4a687060-7e5a-41f5-b45d-b8e6cbeabc75",
+      "name": "30 YouTube upload sonucu",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8060,
+        -430
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://www.googleapis.com/youtube/v3/videos?part=status",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "youTubeOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { id: $json.id || $json.uploadId, status: {privacyStatus:\"private\",containsSyntheticMedia:true,selfDeclaredMadeForKids:false} } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        7830,
+        -430
+      ],
+      "id": "3b1b21af-250a-4b4b-a58c-27aa75e5bec7",
+      "name": "HTTP Request",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "zkYy6CFjoanduQW1",
+          "name": "YouTube account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const g=$input.first().json;\nif(!Array.isArray(g.scenePrompts)||g.scenePrompts.length!==4) throw new Error('Tam olarak 4 sahne gerekli');\nconst labels=['HOOK','BUILD','TWIST','FINALE'];\nreturn g.scenePrompts.map((p,i)=>({json:{sceneIndex:i,sceneNumber:i+1,sceneLabel:labels[i],videoPrompt:p}}));"
+      },
+      "id": "f72ba2b4-e209-40c6-91e4-cb92121a724d",
+      "name": "17B 4 farkli 5sn sahne",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4192,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "773d5771-e1d6-400b-92c8-859c16ad542f",
+      "name": "17C Sahne dongusu 1er 1er",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        4450,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.status_url }}",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "ccc6331c-3a76-4ebd-9042-53f7fe1493bf",
+      "name": "20 FastWan durum GET",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5300,
+        400
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "o6bNPgbtmM2mYZw2",
+          "name": "Header Auth account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const data=$input.first().json;\nconst url=data.video?.url||data.videoUrl||data.url;\nif(typeof url!=='string'||!/^https:\\/\\//.test(url)) throw new Error('FastWan sahne MP4 URL eksik; yayin durduruldu');\nconst sceneIndex=$runIndex;\nif(sceneIndex<0||sceneIndex>3) throw new Error('Beklenmeyen sahne indeksi: '+sceneIndex);\nreturn [{json:{sceneIndex,sceneNumber:sceneIndex+1,videoUrl:url}}];"
+      },
+      "id": "c035bb2f-c8b6-4f5b-9ebb-4c3fc724bcd1",
+      "name": "24B Sahne sonucu kaydet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6070,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const scenes=$input.all().map(x=>x.json).sort((a,b)=>a.sceneIndex-b.sceneIndex);\nif(scenes.length!==4||scenes.some((s,i)=>s.sceneIndex!==i||!/^https:\\/\\//.test(s.videoUrl))) throw new Error('Dort sirali sahne eksiksiz hazir degil; birlestirme ve yayin durduruldu');\nconst urls=scenes.map(x=>x.videoUrl);\nif(new Set(urls).size!==4) throw new Error('Sahne URLleri farkli degil, potansiyel tekrar; islem durduruldu');\nreturn [{json:{video_urls:urls,sceneCount:4,expectedSeconds:20}}];"
+      },
+      "id": "0a33eb08-d728-4253-b713-f48e5dce3a66",
+      "name": "24C 4 sahne dogrula birlestirmeye hazirla",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4770,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://queue.fal.run/fal-ai/ffmpeg-api/merge-videos",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({ video_urls:$json.video_urls, target_fps:24, resolution:{width:720,height:1280} }) }}"
+      },
+      "id": "8e5f88b3-b06d-4131-8823-db45ed7cc938",
+      "name": "24D fal ffmpeg 4 videoyu birlestir",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5070,
+        -200
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "o6bNPgbtmM2mYZw2",
+          "name": "Header Auth account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 15,
+        "unit": "seconds"
+      },
+      "id": "e238d4a5-c9cf-4cf6-b124-6f8243ecba3f",
+      "name": "24E Birlesim bekle 15sn",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        5320,
+        -200
+      ],
+      "webhookId": "f9e4fa33-5600-4866-af8b-12e67f34ddab"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.status_url }}",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "0a0c7797-401d-4f39-8d6b-fe4aeab16ef6",
+      "name": "24F Birlesim durum GET",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5570,
+        -200
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "o6bNPgbtmM2mYZw2",
+          "name": "Header Auth account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d67aee34-e0aa-4d8c-86b9-54cb82366aec",
+              "leftValue": "={{ $json.status === \"COMPLETED\" }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3cbce06d-520f-40ad-8d5d-acf228847e5d",
+      "name": "24G Birlesim tamam mi?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5820,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "82f8c0c9-9d4c-4f67-a731-1d7bad44cc4e",
+              "leftValue": "={{ [\"IN_QUEUE\",\"IN_PROGRESS\"].includes($json.status) && $runIndex < 40 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "dca1ef22-7cbc-45a4-bd79-ea2553cd8081",
+      "name": "24H Birlesim tekrar dene max40",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6040,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "errorMessage": "Fal ffmpeg birlestirme hata/zaman asimi. YouTube yuklemesi baslatilmadi."
+      },
+      "id": "f0c440c1-c892-47e4-91ff-1dda0813ee77",
+      "name": "24I Birlesim HATA",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        6320,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.response_url }}",
+        "options": {
+          "timeout": 120000
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "id": "4fff5ba1-b96e-41c8-8b88-5bbfc18f5e45",
+      "name": "24J Birlesik MP4 sonucu GET",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6310,
+        -320
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "o6bNPgbtmM2mYZw2",
+          "name": "Header Auth account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const obj=$input.first().json;\nconst url=obj.video?.url;\nif(typeof url!=='string'||!url.startsWith('https://'))throw new Error('Birlestirilmis MP4 bulunamadi');\n// Merge endpoint input was 4 separate 5-second clips. Physical duration must still be checked in a live test.\nreturn [{json:obj}];"
+      },
+      "id": "62d5e595-ddca-4497-95fc-0465ecc45ecd",
+      "name": "24K Birlesik MP4 dosyasi dogrula",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6530,
+        -320
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "1f5245e5-00cc-4259-a185-7ae35d69f11f",
+              "leftValue": "={{ $json.sceneIndex === 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2f1f23ae-2c7a-4b0e-9f0f-7e0b00000001",
+      "name": "17D Ilk sahne mi?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4680,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const scene = $input.first().json;\nconst prevIndex = scene.sceneIndex - 1;\nif (!Number.isInteger(prevIndex) || prevIndex < 0 || prevIndex > 2) throw new Error('Onceki sahne indeksi gecersiz');\nlet previous;\ntry {\n  const hits = $('24B Sahne sonucu kaydet').all(0, prevIndex);\n  previous = hits[0]?.json;\n} catch (e) {\n  throw new Error('Onceki sahne sonucu bulunamadi. Yeni video uretimi baslatilmadi: ' + e.message);\n}\nif (!previous || previous.sceneIndex !== prevIndex || !/^https:\\/\\//.test(previous.videoUrl || '')) {\n  throw new Error('Onceki sahne videosu hazir degil. Gorsel sureklilik icin uretim durduruldu.');\n}\nreturn [{json:{...scene, previousVideoUrl: previous.videoUrl}}];"
+      },
+      "id": "2f1f23ae-2c7a-4b0e-9f0f-7e0b00000002",
+      "name": "17E Onceki sahnenin videosunu al",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4890,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://fal.run/fal-ai/ffmpeg-api/extract-frame",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({video_url: $json.previousVideoUrl, frame_type: \"last\"}) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "2f1f23ae-2c7a-4b0e-9f0f-7e0b00000003",
+      "name": "17F Son kareyi cikar (fal ffmpeg)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5090,
+        540
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "o6bNPgbtmM2mYZw2",
+          "name": "Header Auth account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const extraction = $input.first().json;\nconst imageUrl = extraction.images?.[0]?.url || extraction.image?.url;\nif (typeof imageUrl !== 'string' || !imageUrl.startsWith('https://')) {\n  throw new Error('Son kare gorseli alinamadi. Ucretli video uretimi engellendi.');\n}\nconst sceneIndex = $runIndex + 1;\nconst scene = $('17B 4 farkli 5sn sahne').all()[sceneIndex]?.json;\nif (!scene || scene.sceneIndex !== sceneIndex || !scene.videoPrompt) {\n  throw new Error('Yeni sahne promptu ile son kare eslestirilemedi.');\n}\nreturn [{json:{...scene, image_url:imageUrl}}];"
+      },
+      "id": "2f1f23ae-2c7a-4b0e-9f0f-7e0b00000004",
+      "name": "17G Son kare ile sahneyi hazirla",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5300,
+        540
+      ]
+    }
+  ],
+  "connections": {
+    "01 CANLI - Gunde 2 (12/19)": {
+      "main": [
+        [
+          {
+            "node": "02 Guvenli mod - testte yayinlama yok",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 YouTube arama konulari": {
+      "main": [
+        [
+          {
+            "node": "04 YouTube yeni video ara",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 YouTube yeni video ara": {
+      "main": [
+        [
+          {
+            "node": "05 YouTube ID topla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 YouTube ID topla": {
+      "main": [
+        [
+          {
+            "node": "06 YouTube gercek istatistik",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 YouTube gercek istatistik": {
+      "main": [
+        [
+          {
+            "node": "07 YouTube normallestir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 YouTube normallestir": {
+      "main": [
+        [
+          {
+            "node": "08 TikTok yeni videolar - Apify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 TikTok yeni videolar - Apify": {
+      "main": [
+        [
+          {
+            "node": "09 TikTok normallestir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "09 TikTok normallestir": {
+      "main": [
+        [
+          {
+            "node": "10 Instagram reels - Apify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 Instagram reels - Apify": {
+      "main": [
+        [
+          {
+            "node": "11 Instagram normallestir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11 Instagram normallestir": {
+      "main": [
+        [
+          {
+            "node": "12 X video arama - Apify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12 X video arama - Apify": {
+      "main": [
+        [
+          {
+            "node": "13 X normallestir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13 X normallestir": {
+      "main": [
+        [
+          {
+            "node": "14 Gercek trend puanla + top adaylar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14 Gercek trend puanla + top adaylar": {
+      "main": [
+        [
+          {
+            "node": "15 Gemini AI viral strateji istegi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15 Gemini AI viral strateji istegi": {
+      "main": [
+        [
+          {
+            "node": "16 Gemini 3.8 Flash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "16 Gemini 3.8 Flash": {
+      "main": [
+        [
+          {
+            "node": "17 Gemini JSON dogrula",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17 Gemini JSON dogrula": {
+      "main": [
+        [
+          {
+            "node": "17B 4 farkli 5sn sahne",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "19 Bekle 30 saniye": {
+      "main": [
+        [
+          {
+            "node": "20 FastWan durum GET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "21 Video tamam mi?": {
+      "main": [
+        [
+          {
+            "node": "24 Hazir MP4 URL al",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "22 Tekrar kontrol et (toplam max72)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24 Hazir MP4 URL al": {
+      "main": [
+        [
+          {
+            "node": "24B Sahne sonucu kaydet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "25 Video + telifsiz metadata": {
+      "main": [
+        [
+          {
+            "node": "26 Otomatik yayin mi?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "26 Otomatik yayin mi?": {
+      "main": [
+        [
+          {
+            "node": "28 Download MP4 for YouTube",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "27 ONIZLEME - PAYLASILMADI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 Guvenli mod - testte yayinlama yok": {
+      "main": [
+        [
+          {
+            "node": "03 YouTube arama konulari",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "28 Download MP4 for YouTube": {
+      "main": [
+        [
+          {
+            "node": "29 YouTube OAuth Upload PRIVATE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "29 YouTube OAuth Upload PRIVATE": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "30 YouTube upload sonucu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17B 4 farkli 5sn sahne": {
+      "main": [
+        [
+          {
+            "node": "17C Sahne dongusu 1er 1er",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17C Sahne dongusu 1er 1er": {
+      "main": [
+        [
+          {
+            "node": "24C 4 sahne dogrula birlestirmeye hazirla",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "17D Ilk sahne mi?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "20 FastWan durum GET": {
+      "main": [
+        [
+          {
+            "node": "21 Video tamam mi?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "22 Tekrar kontrol et (toplam max72)": {
+      "main": [
+        [
+          {
+            "node": "19 Bekle 30 saniye",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "23 Video uretimi bitti / HATA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24B Sahne sonucu kaydet": {
+      "main": [
+        [
+          {
+            "node": "17C Sahne dongusu 1er 1er",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24C 4 sahne dogrula birlestirmeye hazirla": {
+      "main": [
+        [
+          {
+            "node": "24D fal ffmpeg 4 videoyu birlestir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24D fal ffmpeg 4 videoyu birlestir": {
+      "main": [
+        [
+          {
+            "node": "24E Birlesim bekle 15sn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24E Birlesim bekle 15sn": {
+      "main": [
+        [
+          {
+            "node": "24F Birlesim durum GET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24F Birlesim durum GET": {
+      "main": [
+        [
+          {
+            "node": "24G Birlesim tamam mi?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24G Birlesim tamam mi?": {
+      "main": [
+        [
+          {
+            "node": "24J Birlesik MP4 sonucu GET",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "24H Birlesim tekrar dene max40",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24H Birlesim tekrar dene max40": {
+      "main": [
+        [
+          {
+            "node": "24E Birlesim bekle 15sn",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "24I Birlesim HATA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24J Birlesik MP4 sonucu GET": {
+      "main": [
+        [
+          {
+            "node": "24K Birlesik MP4 dosyasi dogrula",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24K Birlesik MP4 dosyasi dogrula": {
+      "main": [
+        [
+          {
+            "node": "25 Video + telifsiz metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "18 Video uret (ilk FastWan, devam I2V)": {
+      "main": [
+        [
+          {
+            "node": "19 Bekle 30 saniye",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17D Ilk sahne mi?": {
+      "main": [
+        [
+          {
+            "node": "18 Video uret (ilk FastWan, devam I2V)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "17E Onceki sahnenin videosunu al",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17E Onceki sahnenin videosunu al": {
+      "main": [
+        [
+          {
+            "node": "17F Son kareyi cikar (fal ffmpeg)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17F Son kareyi cikar (fal ffmpeg)": {
+      "main": [
+        [
+          {
+            "node": "17G Son kare ile sahneyi hazirla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17G Son kare ile sahneyi hazirla": {
+      "main": [
+        [
+          {
+            "node": "18 Video uret (ilk FastWan, devam I2V)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "tags": []
+}
