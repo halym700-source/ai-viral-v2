@@ -1,0 +1,325 @@
+{
+  "name": "AI VIRAL V2 - SADECE SES TESTI (MEVCUT 20S MP4)",
+  "nodes": [
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa01",
+      "name": "01 Sadece ses testi - Elle baslat",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        240
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa02",
+      "name": "02 Hazir 20sn MP4 ve ses tarifi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        240
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Bu testte FastWan modeli ve yeni video uretimi YOK.\n// Daha once olusturulmus 20 saniyelik sessiz MP4 kullanilir.\nreturn [{json:{\n  video_url:'https://v3b.fal.media/files/b/0aaf5578/se2AI93_XaU_Odeb1S-yv_merged_video.mp4',\n  duration:20.17,\n  prompt:'Original cinematic instrumental ambience synchronized to the visible action: antique clock ticks, gentle mechanical gears, airy magical shimmer, deep mysterious atmosphere, a subtle rising pulse, soft whooshes, and a satisfying final resolution. Keep music and realistic sound effects balanced. No spoken words, singing, lyrics, recognizable melodies, or copyrighted songs.'\n}}];"
+      }
+    },
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa03",
+      "name": "03 MMAudio ses ekle - TEK POST",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        240
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://queue.fal.run/fal-ai/mmaudio-v2",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ video_url: $json.video_url, prompt: $json.prompt, negative_prompt:'speech, dialogue, singing, lyrics, distortion, excessive noise', duration:$json.duration, num_steps:25, cfg_strength:4.5 }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "o6bNPgbtmM2mYZw2",
+          "name": "Header Auth account 3"
+        }
+      }
+    },
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa04",
+      "name": "04 Bekle 20 saniye",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        240
+      ],
+      "parameters": {
+        "amount": 20,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa05",
+      "name": "05 Ses istek durumu GET",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        240
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('03 MMAudio ses ekle - TEK POST').first().json.status_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "o6bNPgbtmM2mYZw2",
+          "name": "Header Auth account 3"
+        }
+      }
+    },
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa06",
+      "name": "06 Ses tamam mi",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1200,
+        240
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "65ade6d8-9231-4f9d-816f-0a3f71a101aa",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "COMPLETED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa07",
+      "name": "07 Beklemeye devam mi (max 15)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1430,
+        425
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ea8aa046-0f50-470f-abce-21b7eecfe102",
+              "leftValue": "={{ ['IN_QUEUE','IN_PROGRESS'].includes($json.status) && $runIndex < 15 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa08",
+      "name": "08 Ses uretimi zaman asimi - HATA",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1660,
+        565
+      ],
+      "parameters": {
+        "errorMessage": "MMAudio sirasi tamamlanmadi veya basarisiz oldu. Fal.ai Request History'den ayni request_id durumunu kontrol edin; yeni POST baslatmayin."
+      }
+    },
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa09",
+      "name": "09 Sesli MP4 sonucunu al",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        140
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('03 MMAudio ses ekle - TEK POST').first().json.response_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "o6bNPgbtmM2mYZw2",
+          "name": "Header Auth account 3"
+        }
+      }
+    },
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa10",
+      "name": "10 SESLI MP4 URL - SONUC",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1670,
+        140
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const x = $input.first().json;\nconst videoUrl = x.video?.url || x.video_url || x.url;\nif (typeof videoUrl !== 'string' || !videoUrl.startsWith('https://')) {\n  throw new Error('MMAudio sesli MP4 URL dondurmedi. Otomasyonu yeniden calistirmadan once API yanitini inceleyin.');\n}\nreturn [{json:{status:'sesli_video_hazir',videoUrl,sourceVideoUrl:$('02 Hazir 20sn MP4 ve ses tarifi').first().json.video_url,notPublished:true,note:'Bu test YouTube yuklemesi ve FastWan video uretimi yapmaz.'}}];"
+      }
+    }
+  ],
+  "connections": {
+    "01 Sadece ses testi - Elle baslat": {
+      "main": [
+        [
+          {
+            "node": "02 Hazir 20sn MP4 ve ses tarifi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 Hazir 20sn MP4 ve ses tarifi": {
+      "main": [
+        [
+          {
+            "node": "03 MMAudio ses ekle - TEK POST",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 MMAudio ses ekle - TEK POST": {
+      "main": [
+        [
+          {
+            "node": "04 Bekle 20 saniye",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 Bekle 20 saniye": {
+      "main": [
+        [
+          {
+            "node": "05 Ses istek durumu GET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 Ses istek durumu GET": {
+      "main": [
+        [
+          {
+            "node": "06 Ses tamam mi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 Ses tamam mi": {
+      "main": [
+        [
+          {
+            "node": "09 Sesli MP4 sonucunu al",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "07 Beklemeye devam mi (max 15)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 Beklemeye devam mi (max 15)": {
+      "main": [
+        [
+          {
+            "node": "04 Bekle 20 saniye",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "08 Ses uretimi zaman asimi - HATA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "09 Sesli MP4 sonucunu al": {
+      "main": [
+        [
+          {
+            "node": "10 SESLI MP4 URL - SONUC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}
