@@ -1,0 +1,278 @@
+{
+  "name": "AI VIRAL V2 - ANA AKISA 8 SES DUGUMU EKLE",
+  "nodes": [
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa03",
+      "name": "24M MMAudio ses uretimi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7380,
+        -260
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://queue.fal.run/fal-ai/mmaudio-v2",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ video_url:$json.video?.url, prompt: \"Original cinematic music and realistic sound effects synchronized to the onscreen action. Match the motion and atmosphere of this AI-generated film about \" + ($(\"17 Gemini JSON dogrula\").first().json.concept || \"an imaginative visual story\") + \". Ambient sound design, restrained instrumental score, carefully timed whooshes and dramatic finish. No singing, lyrics, speech, or copyrighted melodies.\", negative_prompt:\"dialogue, talking, lyrics, singing, distortion, excessive noise\", duration:20, num_steps:25, cfg_strength:4.5 }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "o6bNPgbtmM2mYZw2",
+          "name": "Header Auth account 3"
+        }
+      }
+    },
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa04",
+      "name": "24N Ses icin bekle 20sn",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        7620,
+        -260
+      ],
+      "parameters": {
+        "amount": 20,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa05",
+      "name": "24O Ses durumu GET",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7860,
+        -260
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('24M MMAudio ses uretimi').first().json.status_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "o6bNPgbtmM2mYZw2",
+          "name": "Header Auth account 3"
+        }
+      }
+    },
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa06",
+      "name": "24P Ses tamam mi?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        8100,
+        -260
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "65ade6d8-9231-4f9d-816f-0a3f71a101aa",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "COMPLETED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa07",
+      "name": "24Q Beklemeye devam (max 15)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        8330,
+        -75
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ea8aa046-0f50-470f-abce-21b7eecfe102",
+              "leftValue": "={{ ['IN_QUEUE','IN_PROGRESS'].includes($json.status) && $runIndex < 15 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa08",
+      "name": "24R Ses HATA",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        8560,
+        65
+      ],
+      "parameters": {
+        "errorMessage": "MMAudio sirasi tamamlanmadi veya basarisiz oldu. Fal.ai Request History'den ayni request_id durumunu kontrol edin; yeni POST baslatmayin."
+      }
+    },
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa09",
+      "name": "24S Sesli MP4 sonucunu al",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8340,
+        -360
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $('24M MMAudio ses uretimi').first().json.response_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "o6bNPgbtmM2mYZw2",
+          "name": "Header Auth account 3"
+        }
+      }
+    },
+    {
+      "id": "9f74a0f3-18bd-4890-95fd-0f2101c8aa10",
+      "name": "24T Sesli MP4 dogrula",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8570,
+        -360
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const result = $input.first().json;\nconst videoUrl = result.video?.url || result.video_url || result.url;\nif(typeof videoUrl !== 'string' || !videoUrl.startsWith('https://')) {\n  throw new Error('Sesli video URL bulunamadi; yeniden ses uretimi baslatmadan yaniti kontrol edin.');\n}\nreturn [{json:{videoUrl,video:{url:videoUrl},status:'sesli_video_hazir',sourceVideoUrl:$('24K Birlesik MP4 dosyasi dogrula').first().json.video.url}}];"
+      }
+    }
+  ],
+  "connections": {
+    "24M MMAudio ses uretimi": {
+      "main": [
+        [
+          {
+            "node": "24N Ses icin bekle 20sn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24N Ses icin bekle 20sn": {
+      "main": [
+        [
+          {
+            "node": "24O Ses durumu GET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24O Ses durumu GET": {
+      "main": [
+        [
+          {
+            "node": "24P Ses tamam mi?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24P Ses tamam mi?": {
+      "main": [
+        [
+          {
+            "node": "24S Sesli MP4 sonucunu al",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "24Q Beklemeye devam (max 15)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24Q Beklemeye devam (max 15)": {
+      "main": [
+        [
+          {
+            "node": "24N Ses icin bekle 20sn",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "24R Ses HATA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "24S Sesli MP4 sonucunu al": {
+      "main": [
+        [
+          {
+            "node": "24T Sesli MP4 dogrula",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}
