@@ -1,0 +1,340 @@
+{
+  "name": "AI VIRAL V2 - EK 2 INSTAGRAM VIRAL (2M / 4 GUN) - AYAR GEREKLI",
+  "nodes": [
+    {
+      "id": "viralreels-01",
+      "name": "01 Her gun 15 ve 22",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 15,22 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "viralreels-02",
+      "name": "02 Tarama konulari ve yetkili hesaplar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        250,
+        300
+      ],
+      "parameters": {
+        "jsCode": "/*\n Instagram trend taramasi icin kategori / hashtag listesi.\n ONEMLI: approvedOwners listesine SADECE videolarini YouTube'da aynen\n paylasmaya (GORSel + SES) lisans/izin almis oldugunuz hesaplari yazin.\n Liste bosken otomatik yukleme yapilmaz.\n*/\nconst approvedOwners = [];\nconst hashtags = ['aivideo','aianimation','funnyvideos','satisfying','cuteanimals','viralreels'];\nreturn [{json:{approvedOwners,hashtags,minViews:2000000,withinDays:4}}];"
+      }
+    },
+    {
+      "id": "viralreels-03",
+      "name": "03 Apify Instagram Reels ara",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/actors/apify~instagram-hashtag-scraper/run-sync-get-dataset-items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({hashtags: $json.hashtags, resultsType:'reels',resultsLimit:100}) }}",
+        "options": {
+          "timeout": 290000
+        }
+      },
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "aziXEnQAdSAIrkSG",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "id": "viralreels-04",
+      "name": "04 Son 4 gun 2M ve lisans filtre",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        750,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const cfg=$('02 Tarama konulari ve yetkili hesaplar').first().json;\nconst cutoff=Date.now()-cfg.withinDays*86400000;\nconst approved=new Set(cfg.approvedOwners.map(x=>String(x).replace(/^@/,'').toLowerCase()));\nconst db=$getWorkflowStaticData('global');\nconst uploaded=new Set(Array.isArray(db.uploadedReels)?db.uploadedReels:[]);\nconst raw=$input.all().map(i=>i.json).flatMap(x=>Array.isArray(x)?x:[x]);\nfunction parseDate(x){const v=x.timestamp||x.takenAt||x.takenAtTimestamp||x.createdAt||x.date;\nif(typeof v==='number')return v<10000000000?v*1000:v;return Date.parse(v);}\nconst identified=raw.filter(x=>typeof x==='object'&&x&&!x.error).map(x=>{\nconst url=x.url||x.postUrl||x.inputUrl||(x.shortCode?'https://www.instagram.com/reel/'+x.shortCode+'/':null);\nconst shortCode=x.shortCode||x.shortcode||((url||'').match(/\\/reel\\/([^/?]+)/)||[])[1];\nconst user=String(x.ownerUsername||x.owner?.username||x.owner?.userName||'').replace(/^@/,'').toLowerCase();\nconst views=Number(x.videoPlayCount??x.videoViewCount??x.viewsCount??x.playCount??0);\nconst time=parseDate(x);\nconst videoUrl=x.videoUrl||x.video?.url||x.video_url;\nconst musicType=String(x.musicInfo?.audioType||'').toLowerCase();\nreturn {url,shortCode,user,views,time,videoUrl,musicType,title:String(x.caption||x.text||'').slice(0,100),duration:Number(x.videoDuration||x.video?.duration||0)};\n}).filter(x=>x.url&&x.shortCode&&x.user&&x.time>cutoff&&x.time<=Date.now()+60000&&x.views>=cfg.minViews)\n.sort((a,b)=>b.views-a.views);\nconst allowed=identified.filter(x=>approved.has(x.user)&&!uploaded.has(x.shortCode)&&typeof x.videoUrl==='string'&&x.videoUrl.startsWith('https://')&&x.musicType!=='licensed_music'&&(x.duration===0||x.duration<=60));\nconst selected=allowed[0]||null;\nreturn [{json:{ready:!!selected,approvedOwnersCount:approved.size,qualifiedFound:identified.length,eligibleFound:allowed.length,selected}}];"
+      }
+    },
+    {
+      "id": "viralreels-05",
+      "name": "05 Paylasilabilir video var mi",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1000,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "approved",
+              "leftValue": "={{ $json.ready }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "viralreels-06",
+      "name": "06 Manuel testte yukleme yapma",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1250,
+        200
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "manualmode",
+              "leftValue": "={{ $execution.mode === 'production' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "viralreels-07",
+      "name": "07 Reel MP4 indir",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1500,
+        100
+      ],
+      "parameters": {
+        "url": "={{ $('04 Son 4 gun 2M ve lisans filtre').first().json.selected.videoUrl }}",
+        "options": {
+          "timeout": 180000,
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "viralreels-08",
+      "name": "08 YouTube Shorts PUBLIC",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        1750,
+        100
+      ],
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{ (($('04 Son 4 gun 2M ve lisans filtre').first().json.selected.title||'Viral Reel').replace(/[\\r\\n]/g,' ').slice(0,75)+' #shorts') }}",
+        "regionCode": "TR",
+        "categoryId": "24",
+        "options": {
+          "description": "={{ 'Original Reel: '+$('04 Son 4 gun 2M ve lisans filtre').first().json.selected.url+'\\nCreator: @'+$('04 Son 4 gun 2M ve lisans filtre').first().json.selected.user+'\\nRepublished under creator authorization. #shorts #reels' }}",
+          "notifySubscribers": false,
+          "privacyStatus": "public",
+          "selfDeclaredMadeForKids": false
+        }
+      }
+    },
+    {
+      "id": "viralreels-09",
+      "name": "09 Basarili uploadu kaydet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        100
+      ],
+      "parameters": {
+        "jsCode": "const posted=$input.first().json;\nconst id=posted.id||posted.uploadId;\nif(!id)throw new Error('YouTube video ID gelmedi. Ayni Reel tekrar yuklenmesin diye sonucu kontrol edin.');\nconst s=$('04 Son 4 gun 2M ve lisans filtre').first().json.selected;\nconst db=$getWorkflowStaticData('global');\nconst history=Array.isArray(db.uploadedReels)?db.uploadedReels:[];\nif(!history.includes(s.shortCode))history.push(s.shortCode);\ndb.uploadedReels=history.slice(-500);\nreturn [{json:{status:'uploaded_public',youtubeUrl:'https://www.youtube.com/watch?v='+id,source:s.url,views:s.views}}];"
+      }
+    },
+    {
+      "id": "viralreels-10",
+      "name": "10 Bos veya lisanssiz - yukleme yok",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1250,
+        500
+      ],
+      "parameters": {
+        "jsCode": "const info=$('04 Son 4 gun 2M ve lisans filtre').first().json;\nreturn [{json:{status:'skipped_no_eligible_video',qualifiedFound:info.qualifiedFound,eligibleFound:info.eligibleFound,approvedOwnersCount:info.approvedOwnersCount,note:'Filtreye uyan ve yeniden yayinlama izni olan video yok. Hiçbir sey yüklenmedi.'}}];"
+      }
+    },
+    {
+      "id": "viralreels-11",
+      "name": "11 Manuel onizleme - yayinlama yok",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1500,
+        330
+      ],
+      "parameters": {
+        "jsCode": "return [{json:{status:'preview_only_not_uploaded',selection:$('04 Son 4 gun 2M ve lisans filtre').first().json.selected}}];"
+      }
+    }
+  ],
+  "connections": {
+    "01 Her gun 15 ve 22": {
+      "main": [
+        [
+          {
+            "node": "02 Tarama konulari ve yetkili hesaplar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 Tarama konulari ve yetkili hesaplar": {
+      "main": [
+        [
+          {
+            "node": "03 Apify Instagram Reels ara",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 Apify Instagram Reels ara": {
+      "main": [
+        [
+          {
+            "node": "04 Son 4 gun 2M ve lisans filtre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 Son 4 gun 2M ve lisans filtre": {
+      "main": [
+        [
+          {
+            "node": "05 Paylasilabilir video var mi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 Paylasilabilir video var mi": {
+      "main": [
+        [
+          {
+            "node": "06 Manuel testte yukleme yapma",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "10 Bos veya lisanssiz - yukleme yok",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 Manuel testte yukleme yapma": {
+      "main": [
+        [
+          {
+            "node": "07 Reel MP4 indir",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "11 Manuel onizleme - yayinlama yok",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 Reel MP4 indir": {
+      "main": [
+        [
+          {
+            "node": "08 YouTube Shorts PUBLIC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 YouTube Shorts PUBLIC": {
+      "main": [
+        [
+          {
+            "node": "09 Basarili uploadu kaydet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Istanbul"
+  },
+  "tags": []
+}
