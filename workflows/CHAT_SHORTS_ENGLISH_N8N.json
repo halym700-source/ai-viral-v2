@@ -1,0 +1,545 @@
+{
+  "name": "CHAT SHORTS EN - Voice Matched English (SETUP REQUIRED)",
+  "nodes": [
+    {
+      "id": "english-01-gunde-iki-defa-otomatik",
+      "name": "01 Gunde iki defa - otomatik",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        400
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "15 12,19 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "english-02-yeni-diyalog-promptu",
+      "name": "02 Yeni diyalog promptu",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        230,
+        400
+      ],
+      "parameters": {
+        "jsCode": "const db=$getWorkflowStaticData('global');\nconst recent=(Array.isArray(db.usedTopics)?db.usedTopics:[]).slice(-24);\nconst themes=[\"awkward family group\",\"grandpa vs technology\",\"jealous partner misunderstanding\",\"wrong number surprise\",\"funny family dinner\",\"mom reads texts wrong\",\"dad secret surprise\",\"uncle borrowing money\",\"sibling prank\",\"first-date confusion\",\"best friend awkward call\",\"holiday family chaos\",\"family group autocorrect\",\"mysterious delivery\",\"grandma discovers AI\",\"couple miscommunication\",\"pet at home misunderstanding\"];\nconst theme=themes[Math.floor(Math.random()*themes.length)];\nconst prompt=`Create a completely ORIGINAL short-form comedy text-message conversation, NOT a translation and NOT a copy of any creator. Natural modern US English.\\nTHEME / KONU: ${theme}\\nHook in first two messages, escalating misunderstanding, genuinely funny twist and final punchline. Most lines 8–16 English words, total around 130–175 words. 11–14 messages. No vulgarity, slurs, copyrighted characters, real brand names, impersonation, or songs. Fictional characters.\\nPrefer exactly two participants: speaker \"me\" and one other role, occasionally 3 persons if needed. Pick the other from: girlfriend,boyfriend,mother,father,grandpa,grandma,uncle,aunt,friend,sister,brother. Every line keeps one speaker role, no speaker voice swaps. \"me\" speaks as first person.\\nDo not repeat these recent topics: ${JSON.stringify(recent)}\\nReturn JSON ONLY with exactly this shape: {\"chatTitle\":\"short fun fictional conversation title max 24 chars\", \"topic\":\"specific new plot in under 100 chars\", \"youtubeTitle\":\"catchy English YouTube title ending #shorts max 90 chars\", \"youtubeDescription\":\"one or two sentences that say it is an AI-generated fictional conversation\", \"hashtags\":[\"shorts\",\"comedy\",\"chat\"], \"dialogue\":[{\"speaker\":\"me\",\"text\":\"short message\"},{\"speaker\":\"uncle\",\"text\":\"reply\"}]}. Make 11–14 messages, chronological, 2-3 unique character IDs, under 180 chars per text, no narrator and no stage directions.`;\nreturn [{json:{body:{contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{responseMimeType:'application/json',temperature:1.0,maxOutputTokens:3500}}}}];"
+      }
+    },
+    {
+      "id": "english-03-gemini-diyalog-yaz",
+      "name": "03 Gemini diyalog yaz",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        400
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "JUg6wtJE9fei19P7",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "id": "english-04-diyalog-ve-ses-eslemesini-dogrula",
+      "name": "04 Diyalog ve ses eslemesini dogrula",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        690,
+        400
+      ],
+      "parameters": {
+        "jsCode": "const text=$input.first().json.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';\nif(!text)throw new Error('Gemini cevap vermedi, yeni video istenmedi.');\nlet o;try{o=JSON.parse(text.replace(/^\\x60\\x60\\x60json\\\\s*/i,'').replace(/\\x60\\x60\\x60$/,'').trim());}catch(e){throw new Error('Gemini JSON hatasi: '+text.slice(0,150));}\nconst allowed=new Set(['me','girlfriend','boyfriend','mother','father','grandpa','grandma','uncle','aunt','friend','sister','brother']);\nconst d=o.dialogue;\nif(!Array.isArray(d)||d.length<11||d.length>14||d.some(x=>!allowed.has(x.speaker)||typeof x.text!=='string'||x.text.length<2||x.text.length>180)||new Set(d.map(x=>x.speaker)).size>3||!d.some(x=>x.speaker==='me'))throw new Error('Diyalog kalite/ses esleme kurali gecemedi; render iptal.');\nconst clean=String(o.youtubeTitle||'Funny Text Messages #shorts').slice(0,90);\nconst hashtags=(Array.isArray(o.hashtags)?o.hashtags:[]).map(x=>'#'+String(x).replace(/^#/,'').replace(/[^a-zA-Z0-9_]/g,'')).filter(x=>x.length>1).slice(0,8);\nconst id='en-'+Date.now().toString(36)+'-'+String($execution.id||'manual');\nreturn [{json:{lang:'en',job_id:id,story:{chatTitle:String(o.chatTitle||'Funny Chat').slice(0,28),dialogue:d},topic:String(o.topic||'').slice(0,120),title:clean,description:String(o.youtubeDescription||'Fictional AI-generated conversation.').slice(0,1000)+'\\n\\n'+hashtags.join(' ')}}];"
+      }
+    },
+    {
+      "id": "english-05-github-renderer-baslat",
+      "name": "05 GitHub renderer baslat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        400
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/repos/halym700-source/ai-viral-v2/actions/workflows/chat_video_render.yml/dispatches",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ref:'main',inputs:{lang:$json.lang,job_id:$json.job_id,dialogue_json:JSON.stringify($json.story)}}) }}",
+        "options": {
+          "timeout": 60000
+        }
+      }
+    },
+    {
+      "id": "english-06-bekle-45-saniye",
+      "name": "06 Bekle 45 saniye",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1150,
+        400
+      ],
+      "parameters": {
+        "amount": 45
+      },
+      "webhookId": "en-wait-render-4501"
+    },
+    {
+      "id": "english-07-github-artifact-listesini-al",
+      "name": "07 GitHub artifact listesini al",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1380,
+        400
+      ],
+      "parameters": {
+        "url": "https://api.github.com/repos/halym700-source/ai-viral-v2/actions/artifacts?per_page=100",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      }
+    },
+    {
+      "id": "english-08-render-hazir-mi-kontrol-et",
+      "name": "08 Render hazir mi kontrol et",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1610,
+        400
+      ],
+      "parameters": {
+        "jsCode": "const j=$('04 Diyalog ve ses eslemesini dogrula').first().json;\nconst a=$input.first().json.artifacts||[];\nconst name='chat-'+j.lang+'-'+j.job_id;\nconst match=a.find(x=>x.name===name&&!x.expired);\nreturn [{json:{ready:!!match,artifact_id:match?.id||0,job_id:j.job_id}}];"
+      }
+    },
+    {
+      "id": "english-09-video-hazir-mi",
+      "name": "09 Video hazir mi",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1840,
+        400
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "en-ready",
+              "leftValue": "={{ $json.ready === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "english-10-en-fazla-25-kere-kontrol",
+      "name": "10 En fazla 25 kere kontrol",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2070,
+        600
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "en-limit",
+              "leftValue": "={{ $runIndex < 25 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "english-11-render-zaman-asimi-hata",
+      "name": "11 Render zaman asimi HATA",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        2300,
+        730
+      ],
+      "parameters": {
+        "errorMessage": "GitHub video renderer 25 kontrolde tamamlanmadi. GitHub Actions > Chat Shorts Renderer logunu kontrol et. Tekrar Execute basma."
+      }
+    },
+    {
+      "id": "english-12-mp4-artifact-zip-indir",
+      "name": "12 MP4 artifact ZIP indir",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2070,
+        260
+      ],
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/halym700-source/ai-viral-v2/actions/artifacts/'+$json.artifact_id+'/zip' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 180000,
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "english-13-zip-uzantisini-belirt",
+      "name": "13 ZIP uzantisini belirt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2300,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const item=$input.first();if(!item.binary?.data)throw new Error('ZIP binary gelmedi');item.binary.data.fileName='chat-render.zip';item.binary.data.fileExtension='zip';item.binary.data.mimeType='application/zip';return [item];"
+      }
+    },
+    {
+      "id": "english-14-zip-icinden-mp4-cikar",
+      "name": "14 ZIP icinden MP4 cikar",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1,
+      "position": [
+        2530,
+        260
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      }
+    },
+    {
+      "id": "english-15-youtube-icin-data-hazirla",
+      "name": "15 YouTube icin data hazirla",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2760,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const it=$input.first();const z=Object.values(it.binary||{}).find(x=>String(x.fileName||'').toLowerCase().endsWith('.mp4')||x.mimeType==='video/mp4');if(!z)throw new Error('Artifact icinde mp4 bulunamadi');z.fileName='chat_short.mp4';z.fileExtension='mp4';z.mimeType='video/mp4';return [{json:{},binary:{data:z}}];"
+      }
+    },
+    {
+      "id": "english-16-youtube-oauth-upload-private",
+      "name": "16 YouTube OAuth upload PRIVATE",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        2990,
+        260
+      ],
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{ $('04 Diyalog ve ses eslemesini dogrula').first().json.title }}",
+        "regionCode": "US",
+        "categoryId": "24",
+        "options": {
+          "description": "={{ $('04 Diyalog ve ses eslemesini dogrula').first().json.description }}",
+          "notifySubscribers": false,
+          "privacyStatus": "private",
+          "selfDeclaredMadeForKids": false
+        }
+      }
+    },
+    {
+      "id": "english-17-yayin-sonucu-ve-tekrar-engeli",
+      "name": "17 Yayin sonucu ve tekrar engeli",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3220,
+        260
+      ],
+      "parameters": {
+        "jsCode": "const upload=$input.first().json;const id=upload.id||upload.uploadId;\nif(!id)throw new Error('YouTube video ID bulunamadi');\nconst ctx=$('04 Diyalog ve ses eslemesini dogrula').first().json;\nconst db=$getWorkflowStaticData('global');\ndb.usedTopics=Array.isArray(db.usedTopics)?db.usedTopics:[];\ndb.usedTopics.push(ctx.topic);db.usedTopics=db.usedTopics.slice(-30);\nreturn [{json:{status:'uploaded_private_for_review',youtubeUrl:'https://www.youtube.com/watch?v='+id,language:'en',title:ctx.title}}];"
+      }
+    }
+  ],
+  "connections": {
+    "01 Gunde iki defa - otomatik": {
+      "main": [
+        [
+          {
+            "node": "02 Yeni diyalog promptu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 Yeni diyalog promptu": {
+      "main": [
+        [
+          {
+            "node": "03 Gemini diyalog yaz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 Gemini diyalog yaz": {
+      "main": [
+        [
+          {
+            "node": "04 Diyalog ve ses eslemesini dogrula",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 Diyalog ve ses eslemesini dogrula": {
+      "main": [
+        [
+          {
+            "node": "05 GitHub renderer baslat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 GitHub renderer baslat": {
+      "main": [
+        [
+          {
+            "node": "06 Bekle 45 saniye",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 Bekle 45 saniye": {
+      "main": [
+        [
+          {
+            "node": "07 GitHub artifact listesini al",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 GitHub artifact listesini al": {
+      "main": [
+        [
+          {
+            "node": "08 Render hazir mi kontrol et",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 Render hazir mi kontrol et": {
+      "main": [
+        [
+          {
+            "node": "09 Video hazir mi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "09 Video hazir mi": {
+      "main": [
+        [
+          {
+            "node": "12 MP4 artifact ZIP indir",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "10 En fazla 25 kere kontrol",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 En fazla 25 kere kontrol": {
+      "main": [
+        [
+          {
+            "node": "06 Bekle 45 saniye",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "11 Render zaman asimi HATA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12 MP4 artifact ZIP indir": {
+      "main": [
+        [
+          {
+            "node": "13 ZIP uzantisini belirt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13 ZIP uzantisini belirt": {
+      "main": [
+        [
+          {
+            "node": "14 ZIP icinden MP4 cikar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14 ZIP icinden MP4 cikar": {
+      "main": [
+        [
+          {
+            "node": "15 YouTube icin data hazirla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15 YouTube icin data hazirla": {
+      "main": [
+        [
+          {
+            "node": "16 YouTube OAuth upload PRIVATE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "16 YouTube OAuth upload PRIVATE": {
+      "main": [
+        [
+          {
+            "node": "17 Yayin sonucu ve tekrar engeli",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Istanbul"
+  },
+  "tags": []
+}
