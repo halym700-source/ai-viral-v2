@@ -267,11 +267,40 @@ def encode(wav, starts, duration):
         "language": LANG, "messages": len(lines)
     }, ensure_ascii=False))
 
+def fit_short_duration(wav, start_times, seconds, target_seconds=48.0):
+    """Keep every spoken message while gently accelerating overlong Shorts.
+
+    ffmpeg's atempo changes duration without shifting voice pitch. Bubble
+    reveal times are scaled to stay in sync with the accelerated narration.
+    """
+    if seconds <= target_seconds:
+        return wav, start_times, seconds
+    speed = seconds / target_seconds
+    if speed > 2.0:
+        raise ValueError(
+            f"Dialogue narration {seconds:.1f}s needs over 2x speed. "
+            "Generate a much shorter dialogue instead."
+        )
+    faster_wav = OUT / "audio_fitted.wav"
+    subprocess.run([
+        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        "-i", str(wav), "-filter:a", f"atempo={speed:.6f}",
+        str(faster_wav)
+    ], check=True)
+    fitted_seconds = AudioSegment.from_file(str(faster_wav)).duration_seconds
+    factor = fitted_seconds / seconds
+    fitted_starts = [round(start * factor, 5) for start in start_times]
+    print(
+        f"Duration adjusted: {seconds:.1f}s -> {fitted_seconds:.1f}s "
+        f"(tempo {speed:.2f}x)"
+    )
+    return faster_wav, fitted_starts, fitted_seconds
+
+
 def main():
     paths = asyncio.run(synthesize())
     wav, times, length = build_audio(paths)
-    if length > 60:
-        raise ValueError(f"Video too long ({length:.1f}s); shortened dialogue required")
+    wav, times, length = fit_short_duration(wav, times, length)
     encode(wav, times, length)
 
 if __name__ == "__main__":
