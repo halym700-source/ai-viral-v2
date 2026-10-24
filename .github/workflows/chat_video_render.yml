@@ -36,8 +36,13 @@ jobs:
           python-version: '3.11'
       - name: Install render dependencies
         run: |
-          python -m pip install --disable-pip-version-check pillow==11.3.0 pydub==0.25.1 edge-tts==7.3.1
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg
+          command -v ffmpeg
+          command -v ffprobe
           ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
+          python -m pip install --disable-pip-version-check pillow==11.3.0 pydub==0.25.1 edge-tts==7.3.1
       - name: Generate chat video
         env:
           CHAT_LANG: ${{ inputs.lang }}
