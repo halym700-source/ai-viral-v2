@@ -290,13 +290,17 @@ def draw_frame(t, start_times):
     d.polygon([(663, 1081), (685, 1069), (679, 1095)], fill="white")
     # Reserve the last 150 pixels for Shorts overlay, title and channel name.
     d.line((0, 1138, W, 1138), fill=(44, 73, 79), width=2)
-    total = max(start_times[-1] + 1.0, t + 0.001)
+    total = max(VIDEO_DURATION, 0.001)
     progress = max(0.0, min(1.0, t / total))
     d.rectangle((0, 1141, max(1, round(W * progress)), 1148),
                 fill=(45, 212, 174))
     return image
 
+VIDEO_DURATION = 55.0
+
 def encode(wav, starts, duration):
+    global VIDEO_DURATION
+    VIDEO_DURATION = duration
     target = OUT / "short.mp4"
     proc = subprocess.Popen([
         "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
