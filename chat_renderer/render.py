@@ -92,6 +92,8 @@ F = {
     "head": ImageFont.truetype(font_bold, 31),
     "tiny": ImageFont.truetype(font_regular, 20),
     "badge": ImageFont.truetype(font_bold, 22),
+    "cover": ImageFont.truetype(font_bold, 47),
+    "cover_small": ImageFont.truetype(font_bold, 39),
 }
 
 async def generate_voice(index, msg):
@@ -150,7 +152,7 @@ def gradient_background():
 BASE = gradient_background()
 
 def build_audio(paths):
-    master = AudioSegment.silent(duration=650)
+    master = AudioSegment.silent(duration=180)
     start_times = []
     for path in paths:
         sound = AudioSegment.from_file(str(path)).set_channels(1).set_frame_rate(44100)
@@ -171,6 +173,30 @@ def draw_frame(t, start_times):
     d.text((110, 26), str(theme)[:28], font=F["head"], fill="#ecf1f3")
     d.text((112, 74), "fictional chat  •  voice acted" if LANG == "en" else
            "kurgu sohbet  •  seslendirmeli", font=F["tiny"], fill="#91b1b1")
+
+    # The initial frame doubles as an optional high-contrast Shorts preview.
+    # This is NOT a YouTube custom thumbnail: YouTube picks its own preview.
+    cover_text = str(story.get("coverText", "")).strip().upper()[:40]
+    if cover_text and t < 1.45:
+        accent = (251, 191, 36) if LANG == "en" else (45, 212, 191)
+        panel = (246, 248, 249)
+        d.rounded_rectangle((30, 152, 690, 330), radius=24,
+                            fill=(22, 31, 42), outline=accent, width=5)
+        d.rounded_rectangle((48, 170, 58, 305), radius=5, fill=accent)
+        cover_font = F["cover"]
+        chunks = safe_wrap(d, cover_text, cover_font, 575)
+        if len(chunks) > 2:
+            cover_font = F["cover_small"]
+            chunks = safe_wrap(d, cover_text, cover_font, 575)
+        # Maximum two lines and no tiny/unreadable captions.
+        chunks = chunks[:2]
+        block = len(chunks) * 54
+        y = 241 - block // 2
+        for line in chunks:
+            box = d.textbbox((0, 0), line, font=cover_font)
+            tw = box[2] - box[0]
+            d.text(((W - tw) // 2, y), line, font=cover_font, fill=panel)
+            y += 54
 
     visible = [i for i, val in enumerate(start_times) if val <= t]
     drawables = []
