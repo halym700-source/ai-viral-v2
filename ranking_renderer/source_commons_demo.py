@@ -1,63 +1,26 @@
 #!/usr/bin/env python3
-"""Fetch five distinct openly licensed video clips for a style-only demo.
+"""Select five real Pexels-licensed sample street clips mirrored on GitHub.
 
-Unlike production Pexels videos, Commons videos may need credit. This demo
-uses them solely to illustrate the ranking editor and records source/license.
+Source provenance: aparsoft/yolo-streamlit-detection-tracking/videos/ATTRIBUTION.md
+The sample repository provides attribution and an independently hosted release.
 """
 import json
-import os
-import random
-import re
-import urllib.parse
-import urllib.request
 from pathlib import Path
-
-API="https://commons.wikimedia.org/w/api.php"
-QUERIES=["skateboard", "surfing", "bicycle", "skiing", "snowboarding"]
-LABELS=["SKATEBOARD", "SURFING", "BICYCLE", "SKIING", "SNOWBOARD"]
-def request(params):
-    url=API+"?"+urllib.parse.urlencode(params)
-    req=urllib.request.Request(url,headers={"User-Agent":"RankingDemo/1.0 (noncommercial testing; contact: github.com/halym700-source/ai-viral-v2)",
-                                             "Accept":"application/json"})
-    with urllib.request.urlopen(req,timeout=30) as response:
-        return json.load(response)
-
-def pick(query,used):
-    data=request({"action":"query","generator":"search","gsrsearch":"filetype:video "+query,
-                  "gsrnamespace":"6","gsrlimit":"40","prop":"imageinfo",
-                  "iiprop":"url|size|mime|extmetadata","format":"json","formatversion":"2"})
-    pages=data.get("query",{}).get("pages",[])
-    candidates=[]
-    for page in pages:
-        info=(page.get("imageinfo") or [{}])[0]
-        url=info.get("url","")
-        size=info.get("size",0)
-        title=page.get("title","")
-        if title in used or not url.startswith("https://") or not 50000<size<25000000:
-            continue
-        if not url.lower().split("?")[0].endswith((".webm",".ogv",".ogg",".mp4")):
-            continue
-        meta=info.get("extmetadata",{})
-        lic=meta.get("LicenseShortName",{}).get("value","")
-        if not any(word in lic.lower() for word in ("cc","public domain","pd","copyrighted free use")):
-            continue
-        candidates.append((title,url,lic,info.get("descriptionurl","")))
-    if not candidates:
-        raise RuntimeError("No reusable Commons video for "+query)
-    candidates.sort(key=lambda c: (not c[1].endswith(".webm"),len(c[0])))
-    return candidates[0]
-
+RELEASE="https://github.com/aparsoft/yolo-streamlit-detection-tracking/releases/download/sample-videos/"
+ITEMS=[
+ ("crosswalk_red_car.mp4","CROSSWALK","https://www.pexels.com/video/people-waiting-to-cross-the-street-on-the-pedestrian-lane-2836277/"),
+ ("street_person_in_red.mp4","STREET STYLE","https://www.pexels.com/video/lively-urban-scene-with-diverse-pedestrians-37567255/"),
+ ("street_dogs_bikes.mp4","BIKES & DOGS","https://www.pexels.com/video/vibrant-city-street-with-people-strolling-30507204/"),
+ ("busy_intersection.mp4","INTERSECTION","https://www.pexels.com/video/busy-city-intersection-with-pedestrians-crossing-33865608/"),
+ ("city_traffic_dense.mp4","RUSH HOUR","https://www.pexels.com/video/traffic-in-a-city-5681670/"),
+]
 def main():
-    used=set()
     clips=[]
-    for idx,(query,label) in enumerate(zip(QUERIES,LABELS)):
-        title,url,lic,page=pick(query,used)
-        used.add(title)
-        print("CLIP",idx+1,title,url[:120],lic,flush=True)
-        clips.append({"rank":5-idx,"url":url,"start":0,"label":label,
-                      "source":page or "https://commons.wikimedia.org/wiki/"+urllib.parse.quote(title.replace(" ","_")),
-                      "license":lic})
-    manifest={"title":"RANKING BEST EXTREME SPORTS MOMENTS","intro":"Ranking the best extreme sports moments!",
+    for i,(name,label,page) in enumerate(ITEMS):
+        clips.append({"rank":5-i,"url":RELEASE+name,"start":0,"label":label,
+                      "source":page,"license":"Pexels License; original creator credited on Pexels"})
+        print("CLIP",i+1,name,flush=True)
+    manifest={"title":"RANKING BEST CITY STREET MOMENTS","intro":"Ranking the best city street moments!",
               "brand":"RANKING","clip_seconds":4.8,"clips":clips}
     out=Path("out/ranking_manifest.json")
     out.parent.mkdir(exist_ok=True)
