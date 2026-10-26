@@ -1,0 +1,134 @@
+name: Ranking Shorts Auto Pipeline
+run-name: Ranking pipeline (${{ github.event_name }})
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Preview only, or publish only when schedule and credentials allow
+        type: choice
+        required: true
+        default: preview
+        options:
+          - preview
+          - publish
+      topic_index:
+        description: Optional topic index (0-5); blank uses automatic rotation
+        type: string
+        required: false
+  schedule:
+    - cron: '7 * * * *'
+permissions:
+  contents: write
+concurrency:
+  group: ranking-shorts-publisher
+  cancel-in-progress: false
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      proceed: ${{ steps.check.outputs.proceed }}
+      upload: ${{ steps.check.outputs.upload }}
+      date: ${{ steps.check.outputs.date }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REQUEST_MODE: ${{ inputs.mode }}
+        run: |
+          python - <<'PY'
+          import datetime as dt,json,os
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+          from ranking_renderer.schedule_guard import eligible
+          cfg=json.loads(Path("ranking_renderer/schedule_config.json").read_text())
+          today=dt.datetime.now(ZoneInfo(cfg["timezone"])).date().isoformat()
+          ledger=json.loads(Path("ranking_renderer/published_days.json").read_text())
+          due,reason=eligible(dt.datetime.now(dt.timezone.utc),cfg)
+          already=today in ledger.get("published",{})
+          manual=os.getenv("EVENT_NAME")=="workflow_dispatch"
+          preview=manual and os.getenv("REQUEST_MODE")=="preview"
+          proceed=preview or (due and not already)
+          upload=not preview and due and not already
+          with open(os.environ["GITHUB_OUTPUT"],"a") as out:
+              out.write(f"proceed={str(proceed).lower()}\n")
+              out.write(f"upload={str(upload).lower()}\n")
+              out.write(f"date={today}\n")
+          print(json.dumps({"proceed":proceed,"upload":upload,"reason":reason,
+                            "already_published":already,"date":today}))
+          PY
+  produce:
+    needs: gate
+    if: needs.gate.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      RANK_DATE: ${{ needs.gate.outputs.date }}
+      RANK_TOPIC_INDEX: ${{ inputs.topic_index }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Select licensed vertical clips
+        run: python ranking_renderer/source_pexels.py
+      - name: Install rendering dependencies
+        run: |
+          python -m pip install --disable-pip-version-check pillow==11.3.0 imageio-ffmpeg==0.6.0 edge-tts==7.3.1
+          mkdir -p "$RUNNER_TEMP/rank-bin"
+          ln -sf "$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" "$RUNNER_TEMP/rank-bin/ffmpeg"
+          echo "$RUNNER_TEMP/rank-bin" >> "$GITHUB_PATH"
+      - name: Render five clips and English intro
+        env:
+          RANKING_MANIFEST: out/ranking_manifest.json
+        run: python ranking_renderer/render.py
+      - name: Save MP4 and source documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: ranking-preview-${{ github.run_id }}
+          path: |
+            out/ranking_short.mp4
+            out/ranking_sources.json
+            out/ranking_manifest.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: Install YouTube upload dependencies
+        if: needs.gate.outputs.upload == 'true'
+        run: python -m pip install --disable-pip-version-check google-api-python-client google-auth google-auth-httplib2
+      - name: Upload to approved YouTube channel
+        if: needs.gate.outputs.upload == 'true'
+        env:
+          RANK_PUBLISH_APPROVED: YES
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          YOUTUBE_CHANNEL_ID: ${{ vars.RANKING_YOUTUBE_CHANNEL_ID }}
+        run: python ranking_renderer/upload_youtube.py
+      - name: Record publication to prevent repeat uploads
+        if: needs.gate.outputs.upload == 'true'
+        env:
+          RANK_DATE: ${{ needs.gate.outputs.date }}
+        run: |
+          python - <<'PY'
+          import json,os
+          from pathlib import Path
+          path=Path("ranking_renderer/published_days.json")
+          ledger=json.loads(path.read_text())
+          receipt=json.loads(Path("out/youtube_publish.json").read_text())
+          ledger.setdefault("published",{})[os.environ["RANK_DATE"]]=receipt
+          path.write_text(json.dumps(ledger,indent=2,sort_keys=True)+"\n")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ranking_renderer/published_days.json
+          git commit -m "Record ranking upload for ${{ needs.gate.outputs.date }}"
+          git push
+      - name: Save YouTube receipt
+        if: needs.gate.outputs.upload == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ranking-youtube-receipt-${{ github.run_id }}
+          path: out/youtube_publish.json
+          retention-days: 30
+          if-no-files-found: error
