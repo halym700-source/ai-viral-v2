@@ -22,11 +22,12 @@ jobs:
           python-version: '3.11'
       - name: Install render dependencies
         run: |
-          # ffmpeg/ffprobe are already on the Ubuntu hosted runner.
-          # Avoid apt mirrors: last smoke test timed out installing ffmpeg.
-          command -v ffmpeg
-          command -v ffprobe
-          python -m pip install --disable-pip-version-check pillow==11.3.0 pydub==0.25.1 edge-tts==7.3.1
+          # Static FFmpeg via PyPI avoids Ubuntu apt mirrors, which stalled.
+          python -m pip install --disable-pip-version-check pillow==11.3.0 pydub==0.25.1 edge-tts==7.3.1 imageio-ffmpeg==0.6.0
+          mkdir -p "$RUNNER_TEMP/textvibe-bin"
+          ln -sf "$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" "$RUNNER_TEMP/textvibe-bin/ffmpeg"
+          echo "$RUNNER_TEMP/textvibe-bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/textvibe-bin/ffmpeg" -version | head -n 1
       - name: Compile and render offline example
         run: |
           python -m compileall -q chat_renderer
