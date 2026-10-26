@@ -52,7 +52,8 @@ def main():
     if len(items)!=1:
         raise RuntimeError("OAuth must resolve to exactly one YouTube channel")
     actual = items[0]["id"]
-    expected = os.getenv("YOUTUBE_CHANNEL_ID","").strip()
+    configured = json.loads(Path("ranking_renderer/channel_config.json").read_text())
+    expected = (os.getenv("YOUTUBE_CHANNEL_ID") or configured.get("channel_id") or "").strip()
     if not expected or actual != expected:
         raise RuntimeError("Wrong YouTube channel: expected configured channel ID")
     media = MediaFileUpload(str(path),mimetype="video/mp4",resumable=True,chunksize=8*1024*1024)
