@@ -4,7 +4,9 @@ Inspired by PolarRanks' five-to-one ranking *format*, but not its branding or th
 
 Output: 5 licensed or self-owned clips ranked #5 to #1, 4.8 seconds each (24 seconds total), 720 x 1280 vertical MP4. Includes one English neural voice introduction at the beginning, original clip audio where present, large rankings, text and progress display.
 
-## Run
+## Automatic pipeline
+
+The new gated pipeline is in `.github/workflows/ranking_auto_pipeline.yml`. It rotates topics, selects five Pexels videos, renders a 24-second preview, and can upload to a separately authorized YouTube channel after one-time credential and schedule setup. See [AUTO_SETUP.md](AUTO_SETUP.md). Automatic publishing is **disabled by default**.\n\n## Run
 
 Find five clips that permit redistribution and YouTube monetization; ensure their embedded audio/music is also covered. Fill the source page and actual license in the JSON manifest. The placeholder URLs in example_manifest.json are NOT real assets.
 
