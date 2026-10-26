@@ -3,6 +3,7 @@ on:
   push:
     paths:
       - '.github/workflows/ranking_demo_link.yml'
+      - 'ranking_renderer/source_commons_demo.py'
   workflow_dispatch:
 permissions:
   contents: write
