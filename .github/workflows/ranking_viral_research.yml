@@ -1,0 +1,29 @@
+name: ReshRanks Viral Research
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 6 * * *'
+permissions:
+  contents: read
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      YOUTUBE_RESEARCH_API_KEY: ${{ secrets.YOUTUBE_RESEARCH_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Research viral real-footage candidates (no downloading)
+        run: python ranking_renderer/viral_discovery.py
+      - name: Save research shortlist
+        uses: actions/upload-artifact@v4
+        with:
+          name: reshranks-viral-research-${{ github.run_id }}
+          path: |
+            out/viral_research.json
+            out/viral_research.csv
+          retention-days: 14
+          if-no-files-found: error
