@@ -19,13 +19,13 @@ with tempfile.TemporaryDirectory() as td:
     os.environ["RANK_FPS"]="12"
     os.environ["RANKING_JSON"]=json.dumps({"title":"TOP 5 CRAZIEST MOMENTS",
         "brand":"RANKING SHORTS","intro":"Top five craziest moments!",
-        "clip_seconds":7.8,"clips":clips})
+        "clip_seconds":4.8,"clips":clips})
     import render
     render.main()
     target=Path("out/ranking_short.mp4")
     assert target.is_file() and target.stat().st_size>200000
     dur=render.duration(target)
-    assert 38<dur<41,dur
+    assert 23<dur<25.5,dur
     assert render.has_audio(target)
     frame=target.parent/"ranking_preview.png"
     subprocess.run([FF,"-y","-hide_banner","-loglevel","error","-ss","5",
