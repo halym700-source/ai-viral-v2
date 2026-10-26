@@ -7,13 +7,14 @@ import json
 import os
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
 def fail(message):
     raise SystemExit("NOT_READY: "+message)
 
 def main():
     required=("PEXELS_API_KEY","YOUTUBE_CLIENT_ID","YOUTUBE_CLIENT_SECRET",
-              "YOUTUBE_REFRESH_TOKEN","YOUTUBE_CHANNEL_ID")
+              "YOUTUBE_REFRESH_TOKEN")
     missing=[key for key in required if not os.getenv(key)]
     if missing:
         fail("Missing repository secrets/variable: "+", ".join(missing))
@@ -48,7 +49,10 @@ def main():
     if len(channels)!=1:
         fail("OAuth did not resolve to exactly one YouTube channel")
     actual=channels[0]["id"]
-    expected=os.environ["YOUTUBE_CHANNEL_ID"].strip()
+    configured=json.loads(Path("ranking_renderer/channel_config.json").read_text())
+    expected=(os.getenv("YOUTUBE_CHANNEL_ID") or configured.get("channel_id") or "").strip()
+    if not expected:
+        fail("Destination channel ID is not configured")
     if actual!=expected:
         fail("OAuth is linked to a different channel; no uploads will occur")
     print("OK: YouTube OAuth connected to the configured channel")
