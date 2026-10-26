@@ -21,9 +21,11 @@ def choose_files(videos, min_seconds=4.8):
     """Prefer vertical HD, five unique Pexels IDs and safe source metadata."""
     picks = []
     seen = set()
+    creators = set()
     for video in videos:
         video_id = video.get("id")
-        if not video_id or video_id in seen or float(video.get("duration") or 0) < min_seconds:
+        creator = str((video.get("user") or {}).get("id") or "").strip()
+        if not video_id or video_id in seen or not creator or creator in creators or float(video.get("duration") or 0) < min_seconds:
             continue
         # Reject uploads explicitly labelled as synthetic or AI-generated.
         # Metadata alone cannot prove authenticity; human review is still needed.
@@ -45,10 +47,11 @@ def choose_files(videos, min_seconds=4.8):
                       "start": 0, "label": "MOMENT "+str(5-len(picks)),
                       "source": page, "license": "Pexels License; verify music/audio separately"})
         seen.add(video_id)
+        creators.add(creator)
         if len(picks) == 5:
             break
     if len(picks) != 5:
-        raise ValueError("Fewer than five distinct vertical licensed clips available")
+        raise ValueError("Fewer than five vertical clips from five different creators available")
     return picks
 
 def build_manifest(api_key, day, topic_index=None):
@@ -73,7 +76,7 @@ def main():
     output = Path("out/ranking_manifest.json")
     output.parent.mkdir(exist_ok=True)
     output.write_text(json.dumps(manifest,indent=2),encoding="utf-8")
-    print(json.dumps({"manifest":str(output),"title":manifest["title"],"clips":len(manifest["clips"])}))
+    print(json.dumps({"manifest":str(output),"title":manifest["title"],"clips":len(manifest["clips"]),"creator_diversity":"5 unique Pexels creator IDs; individual camera sessions not verified"}))
 
 if __name__ == "__main__":
     main()
