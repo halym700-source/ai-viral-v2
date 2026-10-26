@@ -31,8 +31,9 @@ jobs:
       - name: Prepare authenticity and reuse-rights review queue
         if: steps.ready.outputs.enabled == 'true'
         run: python ranking_renderer/rights_review.py
+      - name: Discover openly licensed footage candidates (no downloading)
+        run: python ranking_renderer/licensed_footage_discovery.py
       - name: Save research shortlist
-        if: steps.ready.outputs.enabled == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: reshranks-viral-research-${{ github.run_id }}
@@ -40,5 +41,7 @@ jobs:
             out/viral_research.json
             out/viral_research.csv
             out/rights_review_queue.csv
+            out/licensed_real_footage_candidates.json
+            out/licensed_real_footage_candidates.csv
           retention-days: 14
           if-no-files-found: error
