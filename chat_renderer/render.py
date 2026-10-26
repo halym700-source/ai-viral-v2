@@ -50,18 +50,20 @@ for line in lines:
 if len({m["speaker"] for m in lines}) > 3:
     raise ValueError("At most 3 voices per story")
 
+# Prefer neural voices marked for conversational reading, not news narration.
+# Natural pauses are handled in build_audio; no extreme pitch manipulation.
 EN_VOICES = {
-    "me": ("en-US-GuyNeural", "+0%", "+0Hz"),
-    "girlfriend": ("en-US-JennyNeural", "+0%", "+0Hz"),
-    "boyfriend": ("en-US-EricNeural", "+0%", "+0Hz"),
-    "mother": ("en-US-AriaNeural", "-1%", "+0Hz"),
-    "father": ("en-US-ChristopherNeural", "+0%", "+0Hz"),
-    "grandpa": ("en-US-ChristopherNeural", "-5%", "-2Hz"),
-    "grandma": ("en-US-AriaNeural", "-3%", "-1Hz"),
-    "uncle": ("en-US-ChristopherNeural", "+0%", "+0Hz"),
-    "aunt": ("en-US-AriaNeural", "+0%", "+0Hz"),
-    "friend": ("en-US-DavisNeural", "+0%", "+0Hz"),
-    "sister": ("en-US-JennyNeural", "+0%", "+0Hz"),
+    "me": ("en-US-AndrewNeural", "+0%", "+0Hz"),
+    "girlfriend": ("en-US-AvaNeural", "+0%", "+0Hz"),
+    "boyfriend": ("en-US-BrianNeural", "+0%", "+0Hz"),
+    "mother": ("en-US-EmmaNeural", "-2%", "+0Hz"),
+    "father": ("en-US-BrianNeural", "-2%", "+0Hz"),
+    "grandpa": ("en-US-ChristopherNeural", "-4%", "+0Hz"),
+    "grandma": ("en-US-MichelleNeural", "-3%", "+0Hz"),
+    "uncle": ("en-US-RogerNeural", "-1%", "+0Hz"),
+    "aunt": ("en-US-EmmaNeural", "-2%", "+0Hz"),
+    "friend": ("en-US-SteffanNeural", "+0%", "+0Hz"),
+    "sister": ("en-US-AvaNeural", "+0%", "+0Hz"),
     "brother": ("en-US-EricNeural", "+0%", "+0Hz"),
 }
 TR_VOICES = {
@@ -361,8 +363,16 @@ def build_audio(paths):
     start_times = []
     for path in paths:
         sound = AudioSegment.from_file(str(path)).set_channels(1).set_frame_rate(44100)
+        # Gently level very quiet/loud lines so different speakers feel
+        # like participants in the same conversation without crushing dynamics.
+        if sound.dBFS != float("-inf"):
+            gain = max(-3.0, min(3.0, -20.0 - sound.dBFS))
+            sound = sound.apply_gain(gain)
         start_times.append(len(master) / 1000.0)
-        master += sound + AudioSegment.silent(duration=175)
+        # A brief conversational beat, slightly longer after questions.
+        previous_text = lines[len(start_times)-1]["text"].strip()
+        pause_ms = 235 if previous_text.endswith("?") else 155
+        master += sound + AudioSegment.silent(duration=pause_ms)
     master += AudioSegment.silent(duration=750)
     wav = OUT / "audio.wav"
     master.export(str(wav), format="wav")
