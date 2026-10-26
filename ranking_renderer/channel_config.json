@@ -1,0 +1,5 @@
+{
+  "channel_id": null,
+  "channel_url": null,
+  "note": "The channel ID is public metadata. Set it only after verifying the owner's intended new Ranking Shorts channel. Uploads fail closed until this is set."
+}
