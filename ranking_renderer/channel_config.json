@@ -1,5 +1,6 @@
 {
   "channel_id": null,
-  "channel_url": null,
-  "note": "The channel ID is public metadata. Set it only after verifying the owner's intended new Ranking Shorts channel. Uploads fail closed until this is set."
+  "channel_handle": "@reshranks",
+  "channel_url": "https://www.youtube.com/@reshranks",
+  "note": "The channel handle was confirmed by public page title ReshRanks. The authorized channel must match this handle via YouTube API before any upload."
 }
