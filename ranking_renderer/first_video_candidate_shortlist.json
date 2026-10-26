@@ -1,9 +1,9 @@
 {
-  "title": "Top 5 Real Animal Play Moments",
+  "title": "Top 5 Real-Life Play Moments",
   "duration_seconds": 24,
   "channel": "ReshRanks",
   "status": "CANDIDATES_ONLY_NOT_APPROVED",
-  "note": "Candidate selection based on Commons metadata and file-page checks. Not a validated viral ranking. Do not publish or mark approved until manual review. Three cat clips may be visually repetitive; replace if so. Different CC BY-SA versions require careful license compatibility review.",
+  "note": "User reported the 3 cat clips are too similar. Kept only one cat and substituted tiger-with-ball and beach play footage. Tiger species remains twice; can diversify further. Not approved for publication.",
   "clips": [
     {
       "rank": 5,
@@ -21,31 +21,31 @@
     },
     {
       "rank": 4,
-      "label": "Two cats play with a toy — moment B",
-      "file": "Finchen+Lotti playing 04 (1) ies.webm",
-      "source_page": "https://commons.wikimedia.org/wiki/File:Finchen%2BLotti_playing_04_(1)_ies.webm",
-      "rights_holder": "Frank Vincentz",
-      "license": "CC BY-SA 3.0",
-      "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+      "label": "Sumatran tiger playing with a ball",
+      "file": "Sumatran Tiger playing with a ball at Los Angeles Zoo.webm",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Sumatran_Tiger_playing_with_a_ball_at_Los_Angeles_Zoo.webm",
+      "rights_holder": "TO_VERIFY",
+      "license": "CC BY 3.0 (metadata, verify)",
+      "license_url": "https://creativecommons.org/licenses/by/3.0/",
       "authenticity_reviewed": false,
       "rights_reviewed": false,
       "approved_mp4_url": "",
       "permission_evidence_url": "",
-      "review_notes": "Check actual footage, audio, attribution and cross-license share-alike obligations; not approved."
+      "review_notes": "Distinct tiger ball-play clip, not the same tiger pool footage. Review rights and camera authenticity."
     },
     {
       "rank": 3,
-      "label": "Two cats play with a toy — moment C",
-      "file": "Finchen+Lotti playing 05 (1) ies.webm",
-      "source_page": "https://commons.wikimedia.org/wiki/File:Finchen%2BLotti_playing_05_(1)_ies.webm",
-      "rights_holder": "Frank Vincentz",
-      "license": "CC BY-SA 3.0",
-      "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+      "label": "People playing on the beach",
+      "file": "People playing at the beach.webm",
+      "source_page": "https://commons.wikimedia.org/wiki/File:People_playing_at_the_beach.webm",
+      "rights_holder": "TO_VERIFY",
+      "license": "CC BY-SA 4.0 (metadata, verify)",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
       "authenticity_reviewed": false,
       "rights_reviewed": false,
       "approved_mp4_url": "",
       "permission_evidence_url": "",
-      "review_notes": "Check actual footage, audio, attribution and cross-license share-alike obligations; not approved."
+      "review_notes": "Human beach scene; changes concept from animals-only to real play moments. Review privacy, people, rights."
     },
     {
       "rank": 2,
