@@ -1,0 +1,168 @@
+{
+  "name": "RANKING SHORTS - Polar Style Starter - REVIEW BEFORE PUBLISHING",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "rank-manual-1",
+      "name": "01 Start ranking demo",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{title:'TOP 5 CRAZIEST MOTORCYCLE MOMENTS',intro:'Top five craziest motorcycle moments!',query:'motorcycle stunt',clip_seconds:7.8,brand:'RANKING SHORTS',job_id:'rank_'+Date.now()}}];"
+      },
+      "id": "rank-topic-2",
+      "name": "02 Ranking topic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        470,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.pexels.com/videos/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $('02 Ranking topic').first().json.query }}"
+            },
+            {
+              "name": "per_page",
+              "value": "40"
+            },
+            {
+              "name": "orientation",
+              "value": "portrait"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "rank-pexels-3",
+      "name": "03 Find licensed Pexels footage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        730,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const topic=$('02 Ranking topic').first().json;\nconst videos=$input.first().json.videos || [];\nconst picks=[];\nfor (const v of videos) {\n  const sources=(v.video_files||[]).filter(f=>f.file_type==='video/mp4' && f.link && f.link.startsWith('https://'));\n  sources.sort((a,b)=>Math.abs((a.width||1080)-720)-Math.abs((b.width||1080)-720));\n  const best=sources.find(f=>(f.height||0)>(f.width||0) && (f.width||0)>=540) || sources.find(f=>(f.height||0)>(f.width||0));\n  if (!best || !v.url || (v.duration||0)<5 || picks.some(x=>x.url===best.link)) continue;\n  picks.push({rank:5-picks.length,url:best.link,label:'MOMENT '+(5-picks.length),source:v.url,license:'Pexels License',start:0});\n  if (picks.length===5) break;\n}\nif(picks.length<5) throw new Error('Insufficient licensed portrait footage; change search topic or Pexels query.');\nreturn [{json:{job_id:topic.job_id,manifest:{title:topic.title,intro:topic.intro,brand:topic.brand,clip_seconds:topic.clip_seconds,clips:picks}}}];"
+      },
+      "id": "rank-picks-4",
+      "name": "04 Pick five stock clips",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/repos/halym700-source/ai-viral-v2/actions/workflows/ranking_video_render.yml/dispatches",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ref:'main',inputs:{job_id:$json.job_id,manifest_json:JSON.stringify($json.manifest)}}) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "rank-github-5",
+      "name": "05 Ask GitHub to render",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1220,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "01 Start ranking demo": {
+      "main": [
+        [
+          {
+            "node": "02 Ranking topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 Ranking topic": {
+      "main": [
+        [
+          {
+            "node": "03 Find licensed Pexels footage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 Find licensed Pexels footage": {
+      "main": [
+        [
+          {
+            "node": "04 Pick five stock clips",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 Pick five stock clips": {
+      "main": [
+        [
+          {
+            "node": "05 Ask GitHub to render",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
