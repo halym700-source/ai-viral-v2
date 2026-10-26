@@ -8,6 +8,7 @@ The speech backend is unofficial edge-tts, whose availability and downstream
 content/licensing conditions must be checked separately before commercial use.
 """
 import asyncio
+import base64
 import io
 import json
 import math
@@ -16,6 +17,8 @@ from pathlib import Path
 import re
 import subprocess
 import time
+import urllib.request
+import urllib.error
 
 import edge_tts
 from PIL import Image, ImageDraw, ImageFont
@@ -131,7 +134,125 @@ F = {
     "cover_small": ImageFont.truetype(font_bold, 39),
 }
 
+# Default stays on the existing service until the owner explicitly enables paid
+# premium narration. Never store API keys in code or a public workflow payload.
+TTS_PROVIDER = os.environ.get("CHAT_TTS_PROVIDER", "edge").lower().strip()
+if TTS_PROVIDER not in ("edge", "gemini"):
+    raise ValueError("CHAT_TTS_PROVIDER must be 'edge' or 'gemini'")
+
+GEMINI_VOICES = {
+    "me": "Puck",
+    "girlfriend": "Kore",
+    "boyfriend": "Fenrir",
+    "mother": "Kore",
+    "father": "Charon",
+    "grandpa": "Charon",
+    "grandma": "Kore",
+    "uncle": "Charon",
+    "aunt": "Kore",
+    "friend": "Puck",
+    "sister": "Kore",
+    "brother": "Fenrir",
+}
+
+def gemini_delivery(index, msg):
+    role = msg["speaker"]
+    text = msg["text"].strip()
+    notes = [
+        "sound like a real person talking casually to family in a private chat",
+        "US English, natural breathing and lively but understated emphasis",
+        "NOT a commercial announcer, robotic narrator, or exaggerated character",
+    ]
+    if role in ("father", "grandpa", "uncle"):
+        notes.append("wry, older family member with subtle deadpan humor")
+    elif role in ("mother", "grandma", "aunt"):
+        notes.append("warm, conversational and slightly amused")
+    elif role == "me":
+        notes.append("young adult reacting spontaneously")
+    else:
+        notes.append("young adult with relaxed, believable inflection")
+    if text.endswith("?"):
+        notes.append("genuine curiosity, not a staged question")
+    if index == len(lines)-1:
+        notes.append("deliver the punchline dryly with a barely suppressed smile")
+    return "; ".join(notes)
+
+def gemini_voice_blocking(index, msg):
+    key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not key:
+        raise RuntimeError(
+            "Premium Gemini narration selected but GEMINI_API_KEY GitHub secret "
+            "is missing; do not publish this video."
+        )
+    model = os.environ.get("GEMINI_TTS_MODEL", "gemini-3.8-flash-tts")
+    if model not in ("gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts"):
+        raise ValueError("Unsupported TTS model")
+    output = TMP / f"{index:03d}.wav"
+    payload = {
+        "model": model,
+        "input": [{
+            "type": "user_input",
+            "content": [{
+                "type": "text",
+                "text": msg["text"],
+                "annotations": [{"type": "speech_metadata",
+                                 "style": gemini_delivery(index, msg)}],
+            }]
+        }],
+        "response_format": {"type": "audio"},
+        "generation_config": {
+            "speech_config": [{"voice": GEMINI_VOICES[msg["speaker"]]}]
+        }
+    }
+    body = json.dumps(payload).encode("utf-8")
+    url = "https://generativelanguage.googleapis.com/v1beta/interactions"
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(
+                url, data=body, method="POST",
+                headers={"x-goog-api-key":key,
+                         "Content-Type":"application/json"})
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                response = json.load(resp)
+            # In raw REST responses, the last model-output audio block carries
+            # base64 data at steps[].content[].data (not response.output_audio).
+            audio_b64 = None
+            for step in response.get("steps", []):
+                if step.get("type") != "model_output":
+                    continue
+                for piece in step.get("content", []):
+                    if piece.get("type") == "audio" and piece.get("data"):
+                        audio_b64 = piece["data"]
+            if not audio_b64:
+                audio_b64 = (response.get("output_audio") or {}).get("data")
+            if not audio_b64:
+                raise RuntimeError("Gemini returned no audio payload")
+            audio_bytes = base64.b64decode(audio_b64, validate=True)
+            if len(audio_bytes) < 1000:
+                raise RuntimeError("Gemini speech output is empty")
+            output.write_bytes(audio_bytes)
+            return output
+        except urllib.error.HTTPError as e:
+            details = e.read(512).decode("utf-8","replace")
+            if e.code in (429, 500, 502, 503, 504) and attempt < 2:
+                time.sleep((attempt+1)*15)
+                continue
+            raise RuntimeError(
+                f"Gemini TTS request {index} HTTP {e.code}: {details}"
+            ) from e
+        except (TimeoutError, urllib.error.URLError) as e:
+            if attempt < 2:
+                time.sleep((attempt+1)*15)
+                continue
+            raise RuntimeError(f"Gemini TTS network error at line {index}: {e}") from e
+    raise RuntimeError("Gemini TTS failed")
+
 async def generate_voice(index, msg):
+    if TTS_PROVIDER == "gemini":
+        # One request per message preserves exact visual/audio synchronization.
+        # It incurs API usage cost; do not enable without consent.
+        return await asyncio.to_thread(gemini_voice_blocking, index, msg)
+
     voice, rate, pitch = VOICES[msg["speaker"]]
     output = TMP / f"{index:03d}.mp3"
     last_exc = None
