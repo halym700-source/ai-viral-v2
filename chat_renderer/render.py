@@ -15,13 +15,15 @@ import math
 import os
 from pathlib import Path
 import re
+import secrets
+from urllib.parse import urlencode
 import subprocess
 import time
 import urllib.request
 import urllib.error
 
 import edge_tts
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from pydub import AudioSegment
 from pydub.generators import Sine
 
@@ -41,7 +43,8 @@ lines = story.get("dialogue", [])
 if not isinstance(lines, list) or not (9 <= len(lines) <= 16):
     raise ValueError("Expected 9 to 16 chat messages")
 allowed = {"me", "girlfriend", "boyfriend", "mother", "father", "grandpa",
-           "grandma", "uncle", "aunt", "friend", "sister", "brother"}
+           "grandma", "maternal_grandma", "paternal_grandma", "daughter", "son",
+           "uncle", "aunt", "friend", "sister", "brother"}
 for line in lines:
     if line.get("speaker") not in allowed:
         raise ValueError(f"Unrecognized speaker: {line.get('speaker')}")
@@ -60,6 +63,10 @@ EN_VOICES = {
     "father": ("en-US-BrianNeural", "-2%", "+0Hz"),
     "grandpa": ("en-US-ChristopherNeural", "-4%", "+0Hz"),
     "grandma": ("en-US-MichelleNeural", "-3%", "+0Hz"),
+    "maternal_grandma": ("en-US-MichelleNeural", "-3%", "+0Hz"),
+    "paternal_grandma": ("en-US-MichelleNeural", "-3%", "+0Hz"),
+    "daughter": ("en-US-AvaNeural", "+0%", "+0Hz"),
+    "son": ("en-US-EricNeural", "+0%", "+0Hz"),
     "uncle": ("en-US-RogerNeural", "-1%", "+0Hz"),
     "aunt": ("en-US-EmmaNeural", "-2%", "+0Hz"),
     "friend": ("en-US-SteffanNeural", "+0%", "+0Hz"),
@@ -74,6 +81,10 @@ TR_VOICES = {
     "father": ("tr-TR-AhmetNeural", "-10%", "-9Hz"),
     "grandpa": ("tr-TR-AhmetNeural", "-18%", "-20Hz"),
     "grandma": ("tr-TR-EmelNeural", "-16%", "-16Hz"),
+    "maternal_grandma": ("tr-TR-EmelNeural", "-16%", "-16Hz"),
+    "paternal_grandma": ("tr-TR-EmelNeural", "-16%", "-16Hz"),
+    "daughter": ("tr-TR-EmelNeural", "+5%", "+8Hz"),
+    "son": ("tr-TR-AhmetNeural", "+4%", "+4Hz"),
     "uncle": ("tr-TR-AhmetNeural", "-14%", "-14Hz"),
     "aunt": ("tr-TR-EmelNeural", "-10%", "-10Hz"),
     "friend": ("tr-TR-AhmetNeural", "+6%", "+3Hz"),
@@ -84,11 +95,15 @@ VOICES = EN_VOICES if LANG == "en" else TR_VOICES
 DISPLAY = {
     "en": {"me": "You", "girlfriend": "Babe", "boyfriend": "Babe",
            "mother": "Mom", "father": "Dad", "grandpa": "Grandpa",
-           "grandma": "Grandma", "uncle": "Uncle", "aunt": "Aunt",
+           "grandma": "Grandma", "maternal_grandma": "Grandma",
+           "paternal_grandma": "Grandma", "daughter": "Daughter", "son": "Son",
+           "uncle": "Uncle", "aunt": "Aunt",
            "friend": "Bestie", "sister": "Sis", "brother": "Bro"},
     "tr": {"me": "Sen", "girlfriend": "Aşkım", "boyfriend": "Aşkım",
            "mother": "Annem", "father": "Babam", "grandpa": "Dedem",
-           "grandma": "Ninem", "uncle": "Amcam", "aunt": "Teyzem",
+           "grandma": "Ninem", "maternal_grandma": "Anneannem",
+           "paternal_grandma": "Babaannem", "daughter": "Kızım", "son": "Oğlum",
+           "uncle": "Amcam", "aunt": "Teyzem",
            "friend": "Kankam", "sister": "Ablam", "brother": "Abim"},
 }[LANG]
 
@@ -102,6 +117,10 @@ CONTACTS_EN = {
     "father": ("Dad", "Father"),
     "grandpa": ("Grandpa", "Grandfather"),
     "grandma": ("Grandma", "Grandmother"),
+    "maternal_grandma": ("Grandma", "Maternal grandmother"),
+    "paternal_grandma": ("Grandma", "Paternal grandmother"),
+    "daughter": ("My Daughter", "Daughter"),
+    "son": ("My Son", "Son"),
     "uncle": ("Uncle Mike", "Uncle"),
     "aunt": ("Aunt Lisa", "Aunt"),
     "friend": ("Alex", "Best friend"),
@@ -115,6 +134,10 @@ CONTACTS_TR = {
     "father": ("Babam", "Baba"),
     "grandpa": ("Dedem", "Dede"),
     "grandma": ("Ninem", "Nine"),
+    "maternal_grandma": ("Anneannem", "Anneanne"),
+    "paternal_grandma": ("Babaannem", "Babaanne"),
+    "daughter": ("Kızım", "Kızın"),
+    "son": ("Oğlum", "Oğlun"),
     "uncle": ("Amcam", "Amca"),
     "aunt": ("Teyzem", "Teyze"),
     "friend": ("Ege", "Arkadaşın"),
@@ -153,6 +176,10 @@ GEMINI_VOICES = {
     "father": "Charon",
     "grandpa": "Charon",
     "grandma": "Kore",
+    "maternal_grandma": "Kore",
+    "paternal_grandma": "Kore",
+    "daughter": "Kore",
+    "son": "Fenrir",
     "uncle": "Charon",
     "aunt": "Kore",
     "friend": "Puck",
@@ -170,7 +197,7 @@ def gemini_delivery(index, msg):
     ]
     if role in ("father", "grandpa", "uncle"):
         notes.append("wry, older family member with subtle deadpan humor")
-    elif role in ("mother", "grandma", "aunt"):
+    elif role in ("mother", "grandma", "maternal_grandma", "paternal_grandma", "aunt"):
         notes.append("warm, conversational and slightly amused")
     elif role == "me":
         notes.append("young adult reacting spontaneously")
@@ -358,6 +385,102 @@ def gradient_background():
 
 BASE = gradient_background()
 
+# A new portrait is picked for each rendered story, based on the real contact
+# role rather than the story headline. Use openly reusable photos, never scrape
+# Google's image search. CC0/public-domain filter avoids unfulfilled CC-BY
+# attribution requirements in automatically uploaded Shorts.
+PHOTO_SEARCHES = {
+    "father": "portrait middle aged man face photograph",
+    "mother": "portrait middle aged woman face photograph",
+    "grandpa": "portrait elderly man face photograph",
+    "grandma": "portrait elderly woman face photograph",
+    "maternal_grandma": "portrait elderly woman face photograph",
+    "paternal_grandma": "portrait elderly woman face photograph",
+    "girlfriend": "portrait young adult woman face photograph",
+    "boyfriend": "portrait young adult man face photograph",
+    "daughter": "portrait young woman face photograph",
+    "son": "portrait young man face photograph",
+    "aunt": "portrait woman face photograph",
+    "uncle": "portrait man face photograph",
+    "sister": "portrait young woman face photograph",
+    "brother": "portrait young man face photograph",
+    "friend": "portrait adult face photograph",
+}
+PHOTO_AGENT = "TextVibeStories/1.0 (https://github.com/halym700-source/ai-viral-v2)"
+PROFILE_PHOTO = None
+
+def load_contact_portrait(role):
+    """Try a freely usable role-matched photo; never fail the video on network issues.
+
+    No remote calls in offline tests. The returned face is visual fiction and
+    does not imply that the photographed person is a real family member.
+    """
+    if os.environ.get("CHAT_TEST_MODE") == "1":
+        return None
+    if os.environ.get("CHAT_PROFILE_PHOTOS", "on").lower() in ("off", "0", "false"):
+        return None
+    search = PHOTO_SEARCHES.get(role, "portrait adult face photograph")
+    params = {
+        "action": "query", "format": "json", "generator": "search",
+        "gsrsearch": search, "gsrnamespace": 6, "gsrlimit": 24,
+        "prop": "imageinfo", "iiprop": "url|mime|extmetadata",
+        "iiextmetadatafilter": "LicenseShortName|LicenseUrl|AttributionRequired",
+        "iiurlwidth": 256,
+    }
+    api_url = "https://commons.wikimedia.org/w/api.php?" + urlencode(params)
+    try:
+        request = urllib.request.Request(
+            api_url, headers={"User-Agent": PHOTO_AGENT, "Accept": "application/json"}
+        )
+        with urllib.request.urlopen(request, timeout=9) as response:
+            pages = json.load(response).get("query", {}).get("pages", {})
+        options = []
+        for page in pages.values():
+            if not page.get("title", "").lower().endswith(
+                    (".jpg", ".jpeg", ".png", ".webp")):
+                continue
+            info = (page.get("imageinfo") or [{}])[0]
+            if info.get("mime") not in ("image/jpeg", "image/png", "image/webp"):
+                continue
+            meta = info.get("extmetadata", {})
+            license_name = str(meta.get("LicenseShortName", {}).get("value", "")).lower()
+            permitted = ("cc0" in license_name or "public domain" in license_name
+                         or license_name.startswith("pd-") or license_name == "pd")
+            if not permitted:
+                continue
+            url = info.get("thumburl")
+            if url and url.startswith("https://upload.wikimedia.org/"):
+                options.append((url, info.get("descriptionurl", ""), license_name))
+        secrets.SystemRandom().shuffle(options)
+        for image_url, source_page, license_name in options[:6]:
+            try:
+                req = urllib.request.Request(
+                    image_url, headers={"User-Agent": PHOTO_AGENT}
+                )
+                with urllib.request.urlopen(req, timeout=7) as result:
+                    raw = result.read(2_000_001)
+                if len(raw) > 2_000_000:
+                    continue
+                with Image.open(io.BytesIO(raw)) as candidate:
+                    if min(candidate.size) < 80:
+                        continue
+                    portrait = ImageOps.fit(candidate.convert("RGB"), (92, 92))
+                # Include provenance as a sidecar for auditing. Only PD/CC0.
+                (OUT / "profile_photo_source.json").write_text(
+                    json.dumps({"role": role, "source": source_page,
+                                "license": license_name}, ensure_ascii=False),
+                    encoding="utf-8"
+                )
+                return portrait
+            except (OSError, ValueError, urllib.error.URLError):
+                continue
+    except (OSError, ValueError, KeyError, urllib.error.URLError):
+        pass
+    print(f"Portrait unavailable for {role}; using local fallback avatar.")
+    return None
+
+PROFILE_PHOTO = load_contact_portrait(PEER)
+
 def build_audio(paths):
     master = AudioSegment.silent(duration=180)
     start_times = []
@@ -379,10 +502,11 @@ def build_audio(paths):
     return wav, start_times, len(master) / 1000.0
 
 # The reference places content in a light conversation view with warm wallpaper.
-# Reserve the right-hand side and the bottom for YouTube Shorts controls.
+# Keep a small margin on both sides; the former 112px right gutter
+# made outgoing messages look squeezed and left a visible empty strip.
 CHAT_TOP, CHAT_BOTTOM = 144, 1010
 CHAT_GAP = 11
-CHAT_TEXT_WIDTH = 445
+CHAT_TEXT_WIDTH = 583
 CHAT_LINE_HEIGHT = 38
 
 def display_sender(role):
@@ -403,8 +527,15 @@ def draw_frame(t, start_times):
     d.line((0, 126, W, 126), fill=(204, 204, 202), width=2)
     d.line(((23, 49), (11, 63), (23, 77)), fill=(67, 74, 77), width=4)
     d.ellipse((42, 20, 133, 111), fill=(182, 195, 172))
-    d.ellipse((68, 43, 109, 85), fill=(229, 206, 167))
-    d.arc((64, 48, 113, 101), 185, 356, fill=(107, 93, 77), width=3)
+    if PROFILE_PHOTO is not None:
+        mask = Image.new("L", (92, 92), 0)
+        ImageDraw.Draw(mask).ellipse((0, 0, 91, 91), fill=255)
+        image.paste(PROFILE_PHOTO, (42, 20), mask)
+        d.ellipse((42, 20, 133, 111), outline=(234, 234, 231), width=2)
+    else:
+        # Offline/no-connection avatar: real photo is never fabricated.
+        d.ellipse((68, 43, 109, 85), fill=(229, 206, 167))
+        d.arc((64, 48, 113, 101), 185, 356, fill=(107, 93, 77), width=3)
     name = CONTACT_NAME[:16].upper()
     d.text((150, 28), name, font=F["head"], fill=(29, 34, 37))
     subtitle = (CONTACT_ROLE + "  •  online") if LANG == "en" else (CONTACT_ROLE + "  •  çevrimiçi")
@@ -437,10 +568,9 @@ def draw_frame(t, start_times):
                 y += height + CHAT_GAP
                 continue
             own = msg["speaker"] == "me"
-            margin = 23
             widest = max(ld.textbbox((0, 0), row, font=F["text"])[2] for row in rows)
-            bubble_w = max(195, min(566, widest + 48))
-            left = W - 112 - bubble_w if own else 19
+            bubble_w = max(195, min(W - 49, widest + 48))
+            left = W - 24 - bubble_w if own else 24
             right = left + bubble_w
             easing = max(0, min(1, (t-start_times[i])/.20))
             left += int((1-easing)*(13 if own else -13))
