@@ -14,5 +14,6 @@
   "segments": 5,
   "require_verified_reference_hour": true,
   "auto_publish_enabled": false,
-  "note": "Polar Ranks time-of-day not yet verifiable from public sources; never enable publishing or guess a time."
+  "note": "Automatic upload remains disabled until the new YouTube channel, OAuth credentials, Pexels key and a verified publication hour are configured. No guesses about Polar Ranks timestamps.",
+  "late_window_minutes": 70
 }
