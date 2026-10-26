@@ -51,10 +51,16 @@ def main():
     actual=channels[0]["id"]
     configured=json.loads(Path("ranking_renderer/channel_config.json").read_text())
     expected=(os.getenv("YOUTUBE_CHANNEL_ID") or configured.get("channel_id") or "").strip()
-    if not expected:
-        fail("Destination channel ID is not configured")
-    if actual!=expected:
-        fail("OAuth is linked to a different channel; no uploads will occur")
+    handle=str(configured.get("channel_handle") or "").strip()
+    if expected:
+        if actual!=expected:
+            fail("OAuth is linked to a different channel; no uploads will occur")
+    elif handle:
+        match=youtube.channels().list(part="id",forHandle=handle).execute().get("items",[])
+        if len(match)!=1 or match[0].get("id")!=actual:
+            fail("OAuth channel does not match configured handle; no uploads will occur")
+    else:
+        fail("Destination channel ID or handle is not configured")
     print("OK: YouTube OAuth connected to the configured channel")
     print("READY: API connections validated; all future uploads remain PRIVATE")
 
