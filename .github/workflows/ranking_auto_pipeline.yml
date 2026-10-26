@@ -12,13 +12,14 @@ on:
           - preview
           - publish
       source_mode:
-        description: Approved real viral footage, or optional licensed stock demo (preview only)
+        description: Approved footage, or real Commons / stock footage preview
         type: choice
         required: true
         default: approved_real_viral
         options:
           - approved_real_viral
           - licensed_stock_demo
+          - commons_real_preview
       topic_index:
         description: Optional topic index (0-5); blank uses automatic rotation
         type: string
@@ -81,15 +82,18 @@ jobs:
         with:
           python-version: '3.11'
       - name: Validate and select approved authentic viral footage
-        if: github.event_name == 'schedule' || inputs.source_mode != 'licensed_stock_demo'
+        if: github.event_name == 'schedule' || inputs.source_mode == 'approved_real_viral'
         run: python ranking_renderer/approved_manifest.py
+      - name: Select five real-world Commons footage candidates for preview
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'preview' && inputs.source_mode == 'commons_real_preview'
+        run: python ranking_renderer/commons_preview_manifest.py
       - name: Select optional licensed stock demo clips
         if: github.event_name == 'workflow_dispatch' && inputs.mode == 'preview' && inputs.source_mode == 'licensed_stock_demo'
         run: python ranking_renderer/source_pexels.py
-      - name: Reject stock-demo publishing
-        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish' && inputs.source_mode == 'licensed_stock_demo'
+      - name: Reject unapproved source publishing
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish' && inputs.source_mode != 'approved_real_viral'
         run: |
-          echo "Stock demo may only be previewed, not uploaded." >&2
+          echo "Unreviewed Commons and stock footage may only be previewed, not uploaded." >&2
           exit 1
       - name: Install rendering dependencies
         run: |
