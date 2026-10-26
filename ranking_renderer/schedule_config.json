@@ -1,0 +1,18 @@
+{
+  "reference_channel": "https://youtube.com/@polarranks",
+  "reference_video_ids": [
+    "IlrMR45cLGA",
+    "r0imCrZWDmw",
+    "1lZnfmSLq2E",
+    "NnWkawABb1U"
+  ],
+  "timezone": "Europe/Istanbul",
+  "every_n_days": 2,
+  "first_publication_date": null,
+  "publication_time_local": null,
+  "duration_seconds": 24,
+  "segments": 5,
+  "require_verified_reference_hour": true,
+  "auto_publish_enabled": false,
+  "note": "Polar Ranks time-of-day not yet verifiable from public sources; never enable publishing or guess a time."
+}
