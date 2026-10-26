@@ -36,12 +36,12 @@ jobs:
           python-version: '3.11'
       - name: Install render dependencies
         run: |
-          # Use preinstalled ffmpeg: apt mirrors previously stalled 10+ minutes.
-          command -v ffmpeg
-          command -v ffprobe
-          ffmpeg -version | head -n 1
-          ffprobe -version | head -n 1
-          python -m pip install --disable-pip-version-check pillow==11.3.0 pydub==0.25.1 edge-tts==7.3.1
+          # Install a static FFmpeg build via PyPI; avoids stalled apt mirrors.
+          python -m pip install --disable-pip-version-check pillow==11.3.0 pydub==0.25.1 edge-tts==7.3.1 imageio-ffmpeg==0.6.0
+          mkdir -p "$RUNNER_TEMP/textvibe-bin"
+          ln -sf "$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" "$RUNNER_TEMP/textvibe-bin/ffmpeg"
+          echo "$RUNNER_TEMP/textvibe-bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/textvibe-bin/ffmpeg" -version | head -n 1
       - name: Generate chat video
         env:
           CHAT_LANG: ${{ inputs.lang }}
