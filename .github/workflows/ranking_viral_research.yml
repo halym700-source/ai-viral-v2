@@ -28,6 +28,9 @@ jobs:
       - name: Research viral real-footage candidates (no downloading)
         if: steps.ready.outputs.enabled == 'true'
         run: python ranking_renderer/viral_discovery.py
+      - name: Prepare authenticity and reuse-rights review queue
+        if: steps.ready.outputs.enabled == 'true'
+        run: python ranking_renderer/rights_review.py
       - name: Save research shortlist
         if: steps.ready.outputs.enabled == 'true'
         uses: actions/upload-artifact@v4
@@ -36,5 +39,6 @@ jobs:
           path: |
             out/viral_research.json
             out/viral_research.csv
+            out/rights_review_queue.csv
           retention-days: 14
           if-no-files-found: error
