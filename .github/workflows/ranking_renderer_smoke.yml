@@ -1,0 +1,38 @@
+name: Ranking Shorts Smoke Test
+on:
+  push:
+    paths:
+      - 'ranking_renderer/**'
+      - '.github/workflows/ranking_renderer_smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install fast offline dependencies
+        run: |
+          python -m pip install --disable-pip-version-check pillow==11.3.0 imageio-ffmpeg==0.6.0
+          mkdir -p "$RUNNER_TEMP/rank-bin"
+          ln -sf "$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" "$RUNNER_TEMP/rank-bin/ffmpeg"
+          echo "$RUNNER_TEMP/rank-bin" >> "$GITHUB_PATH"
+      - name: Compile and render synthetic sample
+        run: |
+          python -m compileall -q ranking_renderer
+          python ranking_renderer/smoke_test.py
+      - name: Upload example video and source log
+        uses: actions/upload-artifact@v4
+        with:
+          name: ranking-shorts-test-preview
+          path: |
+            out/ranking_short.mp4
+            out/ranking_preview.png
+            out/ranking_sources.json
+          if-no-files-found: error
+          retention-days: 3
