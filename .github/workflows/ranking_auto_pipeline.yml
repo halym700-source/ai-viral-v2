@@ -15,7 +15,7 @@ on:
         description: Approved footage, or real Commons / stock footage preview
         type: choice
         required: true
-        default: approved_real_viral
+        default: commons_real_preview
         options:
           - approved_real_viral
           - licensed_stock_demo
