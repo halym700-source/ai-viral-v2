@@ -51,6 +51,11 @@ def main():
     if len(channels)!=1:
         fail("OAuth did not resolve to exactly one YouTube channel")
     actual=channels[0]["id"]
+    channel_name=str(channels[0].get("snippet",{}).get("title","unknown"))
+    channel_handle=str(channels[0].get("snippet",{}).get("customUrl","unknown"))
+    print("OAuth channel title: "+channel_name)
+    print("OAuth channel handle: "+channel_handle)
+    print("OAuth channel ID: "+actual)
     configured=json.loads(Path("ranking_renderer/channel_config.json").read_text())
     expected=(os.getenv("YOUTUBE_CHANNEL_ID") or configured.get("channel_id") or "").strip()
     handle=str(configured.get("channel_handle") or "").strip()
