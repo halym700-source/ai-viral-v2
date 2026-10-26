@@ -12,7 +12,7 @@ assert len(picks)==5 and [p["rank"] for p in picks]==[5,4,3,2,1]
 assert len(set(p["source"] for p in picks))==5
 manifest={"title":"TOP 5 EXAMPLE MOMENTS","clips":picks}
 body=video_metadata(manifest)
-assert body["status"]["privacyStatus"]=="public"
+assert body["status"]["privacyStatus"]=="private"
 assert all(p["source"] in body["snippet"]["description"] for p in picks)
 assert body["snippet"]["title"].endswith("#Shorts")
 try:
