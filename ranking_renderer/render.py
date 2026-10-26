@@ -185,10 +185,26 @@ def main():
              "-i",str(listing),"-c","copy",str(joined)])
         speech=Path(os.environ["RANKING_INTRO_AUDIO"]) if os.getenv("RANKING_INTRO_AUDIO") else intro_voice(intro,tmp/"intro.mp3")
         video=OUT/"ranking_short.mp4"
-        mix=("[0:a]volume='if(lt(t,3),0.30,1)':eval=frame[bg];"
-             "[1:a]adelay=180:all=1,volume=1.5[tts];"
-             "[bg][tts]amix=inputs=2:duration=first:dropout_transition=0[a]")
-        run([FF,"-y","-hide_banner","-loglevel","error","-i",str(joined),"-i",str(speech),
+        # A short, original rank-change chime at 5, 4, 3, 2, and 1.
+        # Reuse the same sound at each exact segment boundary.
+        cue_times=[round(i*seconds*1000) for i in range(5)]
+        effect_filters=["[2:a]asplit=5"+ "".join(f"[cue{i}]" for i in range(5))]
+        for i,ms in enumerate(cue_times):
+            effect_filters.append(
+                f"[cue{i}]afade=t=out:st=0.07:d=0.19,volume=0.55,"
+                f"adelay={ms}:all=1[hit{i}]"
+            )
+        effect_filters.append(
+            "".join(f"[hit{i}]" for i in range(5))
+            +"amix=inputs=5:duration=longest:normalize=0[sfx]"
+        )
+        effect_filters.append("[0:a]volume='if(lt(t,3),0.30,0.72)':eval=frame[bg]")
+        effect_filters.append("[1:a]adelay=180:all=1,volume=1.5[tts]")
+        effect_filters.append("[bg][tts][sfx]amix=inputs=3:duration=first:dropout_transition=0[a]")
+        mix=";".join(effect_filters)
+        run([FF,"-y","-hide_banner","-loglevel","error",
+             "-i",str(joined),"-i",str(speech),
+             "-f","lavfi","-i","sine=frequency=940:sample_rate=44100:duration=0.26",
              "-filter_complex",mix,"-map","0:v:0","-map","[a]","-c:v","copy",
              "-c:a","aac","-b:a","160k","-movflags","+faststart",str(video)])
     (OUT/"ranking_sources.json").write_text(json.dumps({"title":title,"clips":records},indent=2))
