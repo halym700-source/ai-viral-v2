@@ -52,6 +52,10 @@ with patch.dict(os.environ, {"CHAT_TEST_MODE": "0"}):
                       side_effect=fake_pexels_response):
         photo = render.load_contact_portrait("father")
 assert photo is not None and photo.size == (92, 92)
+# Force the test image into the actual rendered video frame as well.
+render.PROFILE_PHOTO = photo
+preview = render.draw_frame(0, [])
+assert preview.getpixel((85, 60)) == (84, 131, 152), "Profile image is not visible in header"
 
 render.main()
 
