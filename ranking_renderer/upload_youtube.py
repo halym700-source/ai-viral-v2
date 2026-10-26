@@ -2,9 +2,21 @@
 """Publish an approved ranking MP4 using the owner's YouTube OAuth credentials."""
 import json
 import os
+import re
 from pathlib import Path
 
-def video_metadata(manifest):
+def contact_line(email):
+    """Public contact address, not proof of clip reuse permission."""
+    if not email:
+        return ""
+    if not isinstance(email, str) or len(email) > 254 or not re.fullmatch(
+        r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}", email
+    ):
+        raise ValueError("RANKING_CONTACT_EMAIL must be a valid email address")
+    return ("\n\nCopyright concerns, credit corrections or feedback: " + email +
+            "\nContact us with the original video link and rights information.")
+
+def video_metadata(manifest, contact_email=None):
     title = str(manifest["title"]).strip()[:90]
     if not title:
         raise ValueError("Missing video title")
@@ -17,6 +29,7 @@ def video_metadata(manifest):
     description = ("Five standout moments, ranked from #5 to #1. Original edit and English intro.\n\n"
                    "Footage sources and reuse rights:\n" +
                    "\n".join(f"#{c['rank']}: {c['source']} ({c['license']})" for c in sources) +
+                   contact_line(contact_email if contact_email is not None else os.getenv("RANKING_CONTACT_EMAIL", "")) +
                    "\n\n#Shorts #Top5 #Ranking")
     return {"snippet":{"title":title+" #Shorts", "description":description,
                        "categoryId":"24", "defaultLanguage":"en",
