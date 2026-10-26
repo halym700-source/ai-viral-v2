@@ -25,6 +25,11 @@ def choose_files(videos, min_seconds=4.8):
         video_id = video.get("id")
         if not video_id or video_id in seen or float(video.get("duration") or 0) < min_seconds:
             continue
+        # Reject uploads explicitly labelled as synthetic or AI-generated.
+        # Metadata alone cannot prove authenticity; human review is still needed.
+        searchable = " ".join(str(video.get(k) or "") for k in ("url", "description", "title")).lower()
+        if any(flag in searchable for flag in ("ai-generated", "ai generated", "generative ai", "synthetic footage", "text-to-video")):
+            continue
         page = str(video.get("url") or "")
         if not page.startswith("https://www.pexels.com/"):
             continue
