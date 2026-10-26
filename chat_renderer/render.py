@@ -418,7 +418,7 @@ def draw_frame(t, start_times):
             margin = 23
             widest = max(ld.textbbox((0, 0), row, font=F["text"])[2] for row in rows)
             bubble_w = max(195, min(566, widest + 48))
-            left = W - 54 - bubble_w if own else 19
+            left = W - 112 - bubble_w if own else 19
             right = left + bubble_w
             easing = max(0, min(1, (t-start_times[i])/.20))
             left += int((1-easing)*(13 if own else -13))
