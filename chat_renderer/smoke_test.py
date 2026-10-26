@@ -64,10 +64,14 @@ render.main()
 target = Path("out/short.mp4")
 assert target.exists(), "No MP4 produced"
 assert target.stat().st_size > 50000, "MP4 is suspiciously tiny"
-duration = float(subprocess.check_output([
-    "ffprobe", "-v", "error", "-show_entries", "format=duration",
-    "-of", "default=noprint_wrappers=1:nokey=1", str(target)
-], text=True).strip())
+# The standalone FFmpeg wheel does not bundle ffprobe; read its duration
+# from FFmpeg's standard stream diagnostic instead.
+probe = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(target)],
+    capture_output=True, text=True)
+import re
+match = re.search(r"Duration:\\s*(\\d+):(\\d+):([\\d.]+)", probe.stderr)
+assert match, f"FFmpeg could not inspect MP4: {probe.stderr[:300]}"
+duration = int(match.group(1))*3600 + int(match.group(2))*60 + float(match.group(3))
 assert duration > 8, f"Video too short: {duration}"
 subprocess.run([
     "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
