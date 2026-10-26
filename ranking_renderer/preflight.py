@@ -19,7 +19,7 @@ def main():
     if missing:
         fail("Missing repository secrets/variable: "+", ".join(missing))
     pexels=urllib.request.Request(
-        "https://api.pexels.com/v1/videos/search?query=surfing&orientation=portrait&per_page=1",
+        "https://api.pexels.com/videos/search?query=surfing&orientation=portrait&per_page=1",
         headers={"Authorization":os.environ["PEXELS_API_KEY"],
                  "User-Agent":"RankingShorts/1.0"})
     try:
