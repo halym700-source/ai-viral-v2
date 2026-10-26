@@ -16,9 +16,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Check research API connection
+        id: ready
+        run: |
+          if [ -n "$YOUTUBE_RESEARCH_API_KEY" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Research not yet enabled: add YOUTUBE_RESEARCH_API_KEY in Actions secrets."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Research viral real-footage candidates (no downloading)
+        if: steps.ready.outputs.enabled == 'true'
         run: python ranking_renderer/viral_discovery.py
       - name: Save research shortlist
+        if: steps.ready.outputs.enabled == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: reshranks-viral-research-${{ github.run_id }}
