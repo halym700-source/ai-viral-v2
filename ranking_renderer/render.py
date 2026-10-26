@@ -87,7 +87,7 @@ def main():
     clips=sorted(clips,key=lambda c:int(c["rank"]),reverse=True)
     test=os.getenv("RANK_TEST_MODE")=="1"
     w=int(os.getenv("RANK_WIDTH","720"));h=int(os.getenv("RANK_HEIGHT","1280"))
-    fps=int(os.getenv("RANK_FPS","30"));seconds=float(cfg.get("clip_seconds",7.8))
+    fps=int(os.getenv("RANK_FPS","30"));seconds=float(cfg.get("clip_seconds",4.8))
     if not (240<=w<=1080 and 426<=h<=1920 and 8<=fps<=60 and 4<=seconds<=10):
         raise ValueError("Invalid output dimensions or segment length")
     title=str(cfg.get("title","TOP 5 CRAZIEST MOMENTS"))
