@@ -1,0 +1,48 @@
+{
+  "title": "TOP 5 CRAZIEST MOTORCYCLE MOMENTS",
+  "intro": "Top five craziest motorcycle moments!",
+  "brand": "RANKING SHORTS",
+  "clip_seconds": 7.8,
+  "clips": [
+    {
+      "rank": 5,
+      "url": "https://example.com/replace-with-licensed-clip-5.mp4",
+      "start": 0,
+      "label": "MOMENT 5",
+      "source": "https://example.com/actual-license-source-5",
+      "license": "Replace with actual verified reuse permission"
+    },
+    {
+      "rank": 4,
+      "url": "https://example.com/replace-with-licensed-clip-4.mp4",
+      "start": 0,
+      "label": "MOMENT 4",
+      "source": "https://example.com/actual-license-source-4",
+      "license": "Replace with actual verified reuse permission"
+    },
+    {
+      "rank": 3,
+      "url": "https://example.com/replace-with-licensed-clip-3.mp4",
+      "start": 0,
+      "label": "MOMENT 3",
+      "source": "https://example.com/actual-license-source-3",
+      "license": "Replace with actual verified reuse permission"
+    },
+    {
+      "rank": 2,
+      "url": "https://example.com/replace-with-licensed-clip-2.mp4",
+      "start": 0,
+      "label": "MOMENT 2",
+      "source": "https://example.com/actual-license-source-2",
+      "license": "Replace with actual verified reuse permission"
+    },
+    {
+      "rank": 1,
+      "url": "https://example.com/replace-with-licensed-clip-1.mp4",
+      "start": 0,
+      "label": "MOMENT 1",
+      "source": "https://example.com/actual-license-source-1",
+      "license": "Replace with actual verified reuse permission"
+    }
+  ]
+}
