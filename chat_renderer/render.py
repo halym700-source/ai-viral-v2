@@ -386,9 +386,8 @@ def gradient_background():
 BASE = gradient_background()
 
 # A new portrait is picked for each rendered story, based on the real contact
-# role rather than the story headline. Use openly reusable photos, never scrape
-# Google's image search. CC0/public-domain filter avoids unfulfilled CC-BY
-# attribution requirements in automatically uploaded Shorts.
+# role rather than the headline. Use Pexels free-use stock photos first, then
+# Wikimedia Commons CC0/public domain; never scrape Google image search.
 PHOTO_SEARCHES = {
     "father": "portrait middle aged man face photograph",
     "mother": "portrait middle aged woman face photograph",
@@ -406,6 +405,26 @@ PHOTO_SEARCHES = {
     "brother": "portrait young man face photograph",
     "friend": "portrait adult face photograph",
 }
+# Hand-checked role/age categories from Pexels free-use portrait pages.
+# Pexels allows reuse in videos without attribution, but no real identity or
+# endorsement is implied by a fictional contact name.
+PEXELS_PORTRAITS = {
+    "father": [35828102, 28513050, 19285927, 17824398],
+    "mother": [29405854, 15026471],
+    "grandpa": [6667746, 17575432],
+    "grandma": [6972646, 7937532, 12950150, 5610408],
+    "maternal_grandma": [6972646, 7937532, 12950150, 5610408],
+    "paternal_grandma": [12950150, 5610408, 6972646, 7937532],
+    "girlfriend": [35736940, 17532983],
+    "boyfriend": [23285865, 20709195, 3958799],
+    "daughter": [35736940, 17532983],
+    "son": [23285865, 20709195, 3958799],
+    "aunt": [29405854, 15026471],
+    "uncle": [28513050, 19285927, 17824398],
+    "sister": [35736940, 17532983],
+    "brother": [23285865, 20709195, 3958799],
+    "friend": [17532983, 23285865, 35736940, 20709195],
+}
 PHOTO_AGENT = "TextVibeStories/1.0 (https://github.com/halym700-source/ai-viral-v2)"
 PROFILE_PHOTO = None
 
@@ -419,6 +438,32 @@ def load_contact_portrait(role):
         return None
     if os.environ.get("CHAT_PROFILE_PHOTOS", "on").lower() in ("off", "0", "false"):
         return None
+    # Start with a small curated collection to avoid paintings, public
+    # figures, or unrelated images in broad image-search results.
+    ids = list(PEXELS_PORTRAITS.get(role, PEXELS_PORTRAITS["friend"]))
+    secrets.SystemRandom().shuffle(ids)
+    for photo_id in ids:
+        url = (f"https://images.pexels.com/photos/{photo_id}/"
+               f"pexels-photo-{photo_id}.jpeg?auto=compress&cs=tinysrgb&w=256&h=256&fit=crop")
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": PHOTO_AGENT})
+            with urllib.request.urlopen(req, timeout=8) as response:
+                raw = response.read(1_200_001)
+            if len(raw) > 1_200_000:
+                continue
+            with Image.open(io.BytesIO(raw)) as img:
+                if min(img.size) < 80:
+                    continue
+                portrait = ImageOps.fit(img.convert("RGB"), (92, 92))
+            (OUT / "profile_photo_source.json").write_text(
+                json.dumps({"role": role, "source": f"https://www.pexels.com/photo/{photo_id}/",
+                            "license": "Pexels License"}, ensure_ascii=False),
+                encoding="utf-8")
+            return portrait
+        except (OSError, ValueError, urllib.error.URLError):
+            continue
+
+    # If Pexels is unavailable, search Wikimedia Commons for CC0/PD photos.
     search = PHOTO_SEARCHES.get(role, "portrait adult face photograph")
     params = {
         "action": "query", "format": "json", "generator": "search",
