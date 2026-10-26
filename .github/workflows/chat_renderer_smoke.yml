@@ -1,0 +1,40 @@
+name: TextVibe Renderer Smoke Test
+
+on:
+  push:
+    paths:
+      - 'chat_renderer/render.py'
+      - 'chat_renderer/smoke_test.py'
+      - '.github/workflows/chat_renderer_smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install render dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg
+          python -m pip install --disable-pip-version-check pillow==11.3.0 pydub==0.25.1 edge-tts==7.3.1
+      - name: Compile and render offline example
+        run: |
+          python -m compileall -q chat_renderer
+          python chat_renderer/smoke_test.py
+      - name: Upload preview for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: textvibe-smoke-preview
+          path: |
+            out/smoke-preview.png
+            out/short.mp4
+          if-no-files-found: error
+          retention-days: 2
