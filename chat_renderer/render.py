@@ -172,17 +172,54 @@ def safe_wrap(draw, text, font, width):
     return output
 
 def gradient_background():
-    im = Image.new("RGB", (W, H), "#0b141a")
-    dr = ImageDraw.Draw(im)
-    for yy in range(H):
-        mix = yy / H
-        dr.line((0, yy, W, yy),
-                fill=(int(11 + 7 * mix), int(20 + 8 * mix), int(26 + 11 * mix)))
-    # Subtle decorative dots, not another brand's exact UI.
-    for yy in range(145, 1200, 95):
-        for xx in range(45, 730, 130):
-            dr.ellipse((xx, yy, xx + 3, yy + 3), fill=(28, 45, 54))
-    return im
+    """Warm home-wallpaper illustration; original artwork, no borrowed video images."""
+    import random
+    rng = random.Random(41)
+    im = Image.new("RGB", (W, H), "#e5d7c6")
+    d = ImageDraw.Draw(im)
+
+    # Soft indoor plaster tones and low-contrast texture.
+    for y in range(H):
+        f = y / float(H)
+        d.line((0, y, W, y), fill=(
+            int(234 - 31 * f), int(224 - 37 * f), int(207 - 37 * f)))
+    for _ in range(500):
+        x, y = rng.randrange(W), rng.randrange(130, H)
+        c = rng.choice([(227, 213, 196), (240, 231, 217), (211, 202, 184)])
+        d.ellipse((x, y, x+2, y+2), fill=c)
+
+    # Walnut wall trim and a distant interior scene.
+    d.rectangle((0, 155, W, 184), fill=(87, 55, 39))
+    d.rectangle((0, 184, W, 194), fill=(130, 85, 56))
+    d.rectangle((0, 880, W, 916), fill=(112, 72, 51))
+    for xx in range(60, W, 230):
+        d.rectangle((xx, 915, xx+13, H), fill=(113, 81, 63))
+        d.line((xx+7, 915, xx+7, H), fill=(163, 123, 91), width=2)
+
+    # Muted leaf silhouettes in the middle background.
+    for seedx, seedy, scale in [(43, 930, 1.0), (665, 965, 1.3),
+                                (465, 875, 0.85)]:
+        base_x, base_y = int(seedx), int(seedy)
+        for k in range(12):
+            dx = rng.randrange(-100, 100) * scale
+            dy = rng.randrange(-205, 20) * scale
+            end_x, end_y = int(base_x+dx), int(base_y+dy)
+            d.line((base_x, base_y, end_x, end_y), fill=(55, 91, 62), width=4)
+            sz = rng.randrange(18, 36) * scale
+            d.ellipse((end_x-sz, end_y-sz/2, end_x+sz, end_y+sz/2),
+                      fill=rng.choice([(66, 110, 75), (78, 121, 77), (91, 131, 83)]))
+        d.polygon([(base_x-20,base_y-8),(base_x+24,base_y-8),
+                   (base_x+13,base_y+70),(base_x-8,base_y+70)],
+                  fill=(163, 108, 78))
+    # Small red flowers make the background feel lived-in.
+    for x,y in [(52,712),(104,745),(640,780),(671,741),(421,800),
+                (480,830),(525,771)]:
+        for dx,dy in [(-12,0),(10,0),(0,-11),(0,11)]:
+            d.ellipse((x+dx-10,y+dy-10,x+dx+10,y+dy+10),fill=(183,49,57))
+        d.ellipse((x-7,y-7,x+7,y+7),fill=(234,185,81))
+    # Keep wallpaper behind chat bubbles slightly muted for readability.
+    wash = Image.new("RGB",(W,H),(240,234,221))
+    return Image.blend(im,wash,0.18)
 
 BASE = gradient_background()
 
@@ -198,11 +235,12 @@ def build_audio(paths):
     master.export(str(wav), format="wav")
     return wav, start_times, len(master) / 1000.0
 
-# Keep all text within the actual video-safe chat viewport.
-CHAT_TOP, CHAT_BOTTOM = 177, 1023
-CHAT_GAP = 14
-CHAT_TEXT_WIDTH = 405
-CHAT_LINE_HEIGHT = 39
+# The reference places content in a light conversation view with warm wallpaper.
+# Reserve the right-hand side and the bottom for YouTube Shorts controls.
+CHAT_TOP, CHAT_BOTTOM = 144, 1010
+CHAT_GAP = 11
+CHAT_TEXT_WIDTH = 445
+CHAT_LINE_HEIGHT = 38
 
 def display_sender(role):
     if role == "me":
@@ -211,92 +249,96 @@ def display_sender(role):
 
 def bubble_size(draw, msg):
     rows = safe_wrap(draw, msg["text"], F["text"], CHAT_TEXT_WIDTH)
-    # Name on each incoming bubble lets the audience identify speakers fast.
-    return rows, 64 + len(rows) * CHAT_LINE_HEIGHT + 12
+    return rows, 24 + len(rows) * CHAT_LINE_HEIGHT + 25
 
 def draw_frame(t, start_times):
     image = BASE.copy()
     d = ImageDraw.Draw(image)
 
-    # Messenger-like pinned contact header; no vague AI-generated "Caught in 4K".
-    d.rectangle((0, 0, W, 154), fill=(19, 32, 41))
-    d.line((0, 153, W, 153), fill=(47, 71, 83), width=2)
-    d.line([(27, 71), (13, 84), (27, 97)], fill=(204, 226, 234), width=5)
-    d.ellipse((47, 36, 125, 114), fill=(54, 144, 136))
-    initials = CONTACT_NAME[0].upper()
-    d.text((86, 75), initials, font=F["head"], anchor="mm", fill="white")
-    # Long contact names are kept within the title bar.
-    name = CONTACT_NAME[:16]
-    d.text((143, 39), name, font=F["head"], fill=(248, 252, 253))
-    status = (CONTACT_ROLE + "  ·  online") if LANG == "en" else (CONTACT_ROLE + "  ·  çevrimiçi")
-    d.text((145, 94), status, font=F["tiny"], fill=(125, 208, 188))
-    # Small menu dots rather than a huge headline obscuring the story.
-    for y in (59, 76, 93):
-        d.ellipse((677, y, 683, y + 6), fill=(177, 204, 211))
+    # Familiar yet originally drawn chat app header, not an app screenshot.
+    d.rectangle((0, 0, W, 127), fill=(255, 255, 255))
+    d.line((0, 126, W, 126), fill=(204, 204, 202), width=2)
+    d.line(((23, 49), (11, 63), (23, 77)), fill=(67, 74, 77), width=4)
+    d.ellipse((42, 20, 133, 111), fill=(182, 195, 172))
+    d.ellipse((68, 43, 109, 85), fill=(229, 206, 167))
+    d.arc((64, 48, 113, 101), 185, 356, fill=(107, 93, 77), width=3)
+    name = CONTACT_NAME[:16].upper()
+    d.text((150, 28), name, font=F["head"], fill=(29, 34, 37))
+    subtitle = (CONTACT_ROLE + "  •  online") if LANG == "en" else (CONTACT_ROLE + "  •  çevrimiçi")
+    d.text((153, 81), subtitle, font=F["tiny"], fill=(113, 117, 115))
+    # Camcorder, telephone, more buttons in our own glyph style.
+    d.rounded_rectangle((541, 47, 575, 75), radius=4, outline=(41,45,48),width=3)
+    d.polygon([(575, 54), (589, 46), (589, 77), (575, 70)],fill=(41,45,48))
+    d.arc((610, 41, 651, 81), 32, 143, fill=(41,45,48), width=5)
+    for yy in (48, 60, 72):
+        d.ellipse((686, yy, 693, yy+7),fill=(43,46,49))
 
-    # Paint bubbles to a separate transparent layer, then clip it exactly.
-    # This avoids text spilling into the header and disappearing under the
-    # YouTube Shorts controls when later messages arrive.
     layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     ld = ImageDraw.Draw(layer)
     visible = [i for i, start in enumerate(start_times) if start <= t]
     if visible:
-        entries = []
-        for i in visible:
-            rows, height = bubble_size(ld, lines[i])
-            entries.append((i, lines[i], rows, height))
+        entries = [(i, lines[i], *bubble_size(ld, lines[i])) for i in visible]
         heights = [entry[3] + CHAT_GAP for entry in entries]
-        full_height = sum(heights)
-        viewport_height = CHAT_BOTTOM - CHAT_TOP - 22
-        # Show the newest full bubble by scrolling older ones UP. Ease the
-        # scroll over 260 ms so there is no sudden empty screen.
-        last_start = start_times[visible[-1]]
-        amount = max(0.0, min(1.0, (t - last_start) / 0.26))
-        easing = 1 - (1 - amount) ** 3
-        prev_total = full_height - heights[-1]
-        prev_scroll = max(0, prev_total - viewport_height)
-        next_scroll = max(0, full_height - viewport_height)
-        scroll = prev_scroll + (next_scroll - prev_scroll) * easing
-        y = CHAT_TOP + 14 - round(scroll)
-        for index, msg, rows, height in entries:
-            # Entirely offscreen bubbles do not need drawing.
+        usable = CHAT_BOTTOM - CHAT_TOP - 12
+        cumulative = sum(heights)
+        prev = cumulative - heights[-1]
+        elapsed = max(0.0, min(1.0, (t - start_times[visible[-1]]) / .34))
+        ease = 1.0 - (1.0 - elapsed)**3
+        scroll_prev = max(0, prev - usable)
+        scroll_next = max(0, cumulative - usable)
+        scroll = scroll_prev + (scroll_next - scroll_prev) * ease
+        y = CHAT_TOP + 9 - round(scroll)
+
+        for i, msg, rows, height in entries:
             if y + height < CHAT_TOP or y > CHAT_BOTTOM:
                 y += height + CHAT_GAP
                 continue
             own = msg["speaker"] == "me"
-            left, right = (102, 618) if own else (30, 546)
-            # Chat bubbles briefly slide in, then remain fully stable.
-            reveal = max(0.0, min(1.0, (t - start_times[index]) / 0.22))
-            shift = round((1 - reveal) * (16 if own else -16))
-            x0, x1 = left + shift, right + shift
-            bg = (24, 94, 78, 255) if own else (43, 59, 70, 255)
-            fg = (179, 249, 209, 255) if own else (144, 208, 250, 255)
-            ld.rounded_rectangle((x0, y, x1, y + height), radius=21, fill=bg)
-            ld.text((x0 + 19, y + 11), display_sender(msg["speaker"]), font=F["name"], fill=fg)
-            baseline = y + 44
+            margin = 23
+            widest = max(ld.textbbox((0, 0), row, font=F["text"])[2] for row in rows)
+            bubble_w = max(195, min(566, widest + 48))
+            left = W - 54 - bubble_w if own else 19
+            right = left + bubble_w
+            easing = max(0, min(1, (t-start_times[i])/.20))
+            left += int((1-easing)*(13 if own else -13))
+            right += int((1-easing)*(13 if own else -13))
+            background = (213, 246, 195, 255) if own else (255, 255, 255, 255)
+            outline = (191, 226, 176, 255) if own else (225, 226, 219, 255)
+            ld.rounded_rectangle((left, y, right, y+height), radius=19,
+                                 fill=background, outline=outline, width=1)
+            # Speech-bubble tails: subtle, readable and familiar.
+            if own:
+                ld.polygon([(right-3,y+11),(right+9,y+16),(right-3,y+31)],fill=background)
+            else:
+                ld.polygon([(left+3,y+11),(left-8,y+16),(left+3,y+31)],fill=background)
+            ty = y+14
             for row in rows:
-                ld.text((x0 + 19, baseline), row, font=F["text"], fill=(252, 252, 252, 255))
-                baseline += CHAT_LINE_HEIGHT
+                ld.text((left+21, ty), row, font=F["text"], fill=(23, 29, 29, 255))
+                ty += CHAT_LINE_HEIGHT
+            # A small timestamp and double checkmarks make it feel like a chat.
+            mm = 35+(i//6)
+            stamp = f"14:{mm:02d}"
+            font = F["tiny"]
+            sw = ld.textbbox((0,0),stamp,font=font)[2]
+            ld.text((right-15-sw-(29 if own else 0),y+height-30),
+                    stamp,font=font,fill=(125,135,134,255))
+            if own:
+                check_x = right - 31
+                cy=y+height-20
+                ld.line([(check_x-7,cy-2),(check_x-3,cy+2),(check_x+4,cy-6)],
+                        fill=(40,153,201,255),width=2)
+                ld.line([(check_x,cy-2),(check_x+4,cy+2),(check_x+11,cy-6)],
+                        fill=(40,153,201,255),width=2)
             y += height + CHAT_GAP
-    viewport = layer.crop((0, CHAT_TOP, W, CHAT_BOTTOM))
-    image.paste(viewport, (0, CHAT_TOP), viewport)
+    viewport = layer.crop((0,CHAT_TOP,W,CHAT_BOTTOM))
+    image.paste(viewport,(0,CHAT_TOP),viewport)
 
-    # A fixed input area conveys the phone-chat context without hiding text.
-    d.rounded_rectangle((27, 1045, 629, 1111), radius=29,
-                        fill=(29, 48, 57), outline=(61, 82, 90), width=2)
-    placeholder = "Message..." if LANG == "en" else "Mesaj..."
-    d.text((49, 1060), placeholder, font=F["text"], fill=(137, 160, 170))
-    d.ellipse((649, 1055, 700, 1107), fill=(42, 162, 133))
-    d.polygon([(663, 1081), (685, 1069), (679, 1095)], fill="white")
-    # Reserve the last 150 pixels for Shorts overlay, title and channel name.
-    d.line((0, 1138, W, 1138), fill=(44, 73, 79), width=2)
-    total = max(VIDEO_DURATION, 0.001)
-    progress = max(0.0, min(1.0, t / total))
-    d.rectangle((0, 1141, max(1, round(W * progress)), 1148),
-                fill=(45, 212, 174))
+    # The bottom remains wallpaper, not a fake message box covering the ending.
+    # A quiet timeline under the chat avoids interference with Shorts UI.
+    d.rectangle((0,1110,W,1118),fill=(221,219,206))
+    progress = max(0,min(1,t/max(VIDEO_DURATION,0.001)))
+    d.rectangle((0,1110,round(W*progress),1118),fill=(90,174,138))
     return image
-
-VIDEO_DURATION = 55.0
 
 def encode(wav, starts, duration):
     global VIDEO_DURATION
