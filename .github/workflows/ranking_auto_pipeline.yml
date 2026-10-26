@@ -12,11 +12,12 @@ on:
           - preview
           - publish
       source_mode:
-        description: Approved real footage, or optional licensed stock preview
+        description: Preview without an API key, or approved real footage for publishing
         type: choice
         required: true
-        default: approved_real_viral
+        default: open_archive_preview
         options:
+          - open_archive_preview
           - approved_real_viral
           - licensed_stock_demo
       topic_index:
@@ -83,13 +84,16 @@ jobs:
       - name: Validate and select approved authentic viral footage
         if: github.event_name == 'schedule' || inputs.source_mode == 'approved_real_viral'
         run: python ranking_renderer/approved_manifest.py
+      - name: Select CC-declared archive footage without an API key (preview only)
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'preview' && inputs.source_mode == 'open_archive_preview'
+        run: python ranking_renderer/source_archive_preview.py
       - name: Select optional licensed stock demo clips
         if: github.event_name == 'workflow_dispatch' && inputs.mode == 'preview' && inputs.source_mode == 'licensed_stock_demo'
         run: python ranking_renderer/source_pexels.py
       - name: Reject unapproved source publishing
         if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish' && inputs.source_mode != 'approved_real_viral'
         run: |
-          echo "Unreviewed stock footage may only be previewed, not uploaded." >&2
+          echo "Unreviewed archive or stock footage may only be previewed, not uploaded." >&2
           exit 1
       - name: Install rendering dependencies
         run: |
