@@ -27,6 +27,7 @@ jobs:
           python -m compileall -q ranking_renderer
           python ranking_renderer/schedule_test.py
           python ranking_renderer/pipeline_test.py
+          python ranking_renderer/viral_discovery_test.py
           python ranking_renderer/smoke_test.py
       - name: Upload example video and source log
         uses: actions/upload-artifact@v4
