@@ -33,6 +33,26 @@ os.environ["CHAT_JSON"] = json.dumps({
 })
 import render
 
+# Verify full-width outgoing bubble layout and a real image can be loaded into
+# the 92px circular avatar without relying on external image-host availability.
+assert render.CHAT_TEXT_WIDTH >= 560
+assert render.PEER == "father"
+from unittest.mock import patch
+from PIL import Image
+import io
+
+jpeg = io.BytesIO()
+Image.new("RGB", (128, 128), (84, 131, 152)).save(jpeg, format="JPEG")
+def fake_pexels_response(req, timeout=8):
+    assert req.full_url.startswith("https://images.pexels.com/photos/")
+    return io.BytesIO(jpeg.getvalue())
+
+with patch.dict(os.environ, {"CHAT_TEST_MODE": "0"}):
+    with patch.object(render.urllib.request, "urlopen",
+                      side_effect=fake_pexels_response):
+        photo = render.load_contact_portrait("father")
+assert photo is not None and photo.size == (92, 92)
+
 render.main()
 
 target = Path("out/short.mp4")
