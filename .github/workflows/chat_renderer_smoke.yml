@@ -22,8 +22,10 @@ jobs:
           python-version: '3.11'
       - name: Install render dependencies
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y ffmpeg
+          # ffmpeg/ffprobe are already on the Ubuntu hosted runner.
+          # Avoid apt mirrors: last smoke test timed out installing ffmpeg.
+          command -v ffmpeg
+          command -v ffprobe
           python -m pip install --disable-pip-version-check pillow==11.3.0 pydub==0.25.1 edge-tts==7.3.1
       - name: Compile and render offline example
         run: |
