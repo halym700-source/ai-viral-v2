@@ -122,6 +122,7 @@ jobs:
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
           YOUTUBE_CHANNEL_ID: ${{ vars.RANKING_YOUTUBE_CHANNEL_ID }}
+          RANKING_CONTACT_EMAIL: ${{ vars.RANKING_CONTACT_EMAIL }}
         run: python ranking_renderer/upload_youtube.py
       - name: Record publication to prevent repeat uploads
         if: needs.gate.outputs.upload == 'true'
