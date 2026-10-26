@@ -23,32 +23,63 @@ def has_audio(path):
 def font(sz):
     return ImageFont.truetype(FONT,sz) if Path(FONT).exists() else ImageFont.load_default()
 
-def lines(text, n=24):
-    out=[]
-    for w in text.upper().split():
-        if not out or len(out[-1])+len(w)+1>n: out.append(w)
-        else: out[-1]+=" "+w
-    return out[:3]
+def text_width(draw, text, f, stroke=0):
+    box=draw.textbbox((0,0),text,font=f,stroke_width=stroke)
+    return box[2]-box[0]
 
 def draw_card(path, title, label, rank, brand, w, h):
-    s=w/720; im=Image.new("RGBA",(w,h));d=ImageDraw.Draw(im,"RGBA")
-    d.rounded_rectangle((17*s,18*s,w-17*s,218*s),radius=int(20*s),fill=(10,14,25,210))
-    d.text((32*s,24*s),brand[:30].upper(),font=font(int(23*s)),fill="#FFCB38")
-    for i,ln in enumerate(lines(title,max(12,int(28*720/w)))):
-        d.text((32*s,(65+49*i)*s),ln,font=font(int(37*s)),fill="white",stroke_width=max(1,int(2*s)),stroke_fill="#0a0b10")
-    d.ellipse((26*s,265*s,164*s,403*s),fill="#FFCB38",outline="white",width=max(1,int(3*s)))
-    f=font(int(78*s));bb=d.textbbox((0,0),str(rank),font=f)
-    d.text(((190*s-(bb[2]-bb[0]))/2,334*s-(bb[3]-bb[1])/2-bb[1]),str(rank),font=f,fill="#131722")
-    if label:
-        y=h-int(125*s)
-        d.rounded_rectangle((20*s,y,w-20*s,h-int(52*s)),radius=int(16*s),fill=(8,10,16,197))
-        f=font(int(30*s));text=label.upper()[:34]; bb=d.textbbox((0,0),text,font=f)
-        d.text(((w-(bb[2]-bb[0]))/2,y+int(16*s)),text,font=f,fill="white")
-    step=(w-60*s)/5
-    for i in range(5):
-        x=30*s+i*step
-        d.rounded_rectangle((x,h-35*s,x+step-6*s,h-23*s),radius=int(4*s),
-            fill="#FFCB38" if i==5-rank else (255,255,255,170))
+    """Minimal Polar-style ranking layout: bold top banner and left-side rank list."""
+    s=w/720
+    im=Image.new("RGBA",(w,h),(0,0,0,0))
+    d=ImageDraw.Draw(im,"RGBA")
+    banner=int(182*s)
+    d.rectangle((0,0,w,banner),fill=(0,0,0,255))
+    raw=title.upper().replace("TOP 5 ","").replace("TOP FIVE ","")
+    words=raw.split()
+    if words and words[0]=="RANKING":
+        words=words[1:]
+    # Split the topic over two lines; highlight its hook word, not the whole line.
+    if len(words)>=3:
+        top=["RANKING",words[0]]
+        bottom=words[1:]
+    elif len(words)==2:
+        top=["RANKING",words[0]]
+        bottom=[words[1]]
+    else:
+        top=["RANKING"]
+        bottom=words
+    title_font=font(int(51*s))
+    for row,y in ((top,35*s),(bottom,99*s)):
+        while row and text_width(d," ".join(row),title_font)>w-34*s:
+            title_font=font(max(22,int(title_font.size-2*s)))
+        widths=[text_width(d,word,title_font,stroke=max(1,int(2*s))) for word in row]
+        gap=11*s
+        x=(w-sum(widths)-gap*max(0,len(row)-1))/2
+        for j,word in enumerate(row):
+            color="#FFFFFF"
+            if row is top and j==1: color="#FFDF42"
+            if row is bottom and j==0: color="#43C9FF"
+            d.text((x,y),word,font=title_font,fill=color,
+                   stroke_width=max(1,int(2*s)),stroke_fill="#0B0B0B")
+            x+=widths[j]+gap
+    # Five small outlined rank numbers at fixed positions. Only the current
+    # clip's label appears, making the footage visible without heavy cards.
+    palette={1:"#FFDC35",2:"#45B8FF",3:"#FF4D55",4:"#FFFFFF",5:"#FFFFFF"}
+    f=font(int(45*s))
+    labelfont=font(int(31*s))
+    for r in range(1,6):
+        y=(273+(r-1)*111)*s
+        number=f"{r}."
+        d.text((43*s,y+3*s),number,font=f,fill=palette[r],
+               stroke_width=max(2,int(4*s)),stroke_fill="#121212")
+        if r==rank:
+            active=str(label or f"MOMENT {r}").upper()[:24]
+            # Shrink the label so it never crosses the YouTube UI on the right.
+            current_font=labelfont
+            while text_width(d,active,current_font)>w-165*s and current_font.size>15*s:
+                current_font=font(current_font.size-2)
+            d.text((127*s,y+10*s),active,font=current_font,fill="#FFFFFF",
+                   stroke_width=max(2,int(4*s)),stroke_fill="#141414")
     im.save(path)
 
 def download(url, path):
