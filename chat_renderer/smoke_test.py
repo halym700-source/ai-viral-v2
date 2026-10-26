@@ -54,6 +54,7 @@ with patch.dict(os.environ, {"CHAT_TEST_MODE": "0"}):
 assert photo is not None and photo.size == (92, 92)
 # Force the test image into the actual rendered video frame as well.
 render.PROFILE_PHOTO = photo
+render.VIDEO_DURATION = 12
 preview = render.draw_frame(0, [])
 assert preview.getpixel((85, 60)) == (84, 131, 152), "Profile image is not visible in header"
 
