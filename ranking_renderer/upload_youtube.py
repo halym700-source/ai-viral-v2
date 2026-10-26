@@ -21,7 +21,7 @@ def video_metadata(manifest):
     return {"snippet":{"title":title+" #Shorts", "description":description,
                        "categoryId":"24", "defaultLanguage":"en",
                        "tags":["Shorts","Top 5","Ranking"]},
-            "status":{"privacyStatus":"public","selfDeclaredMadeForKids":False}}
+            "status":{"privacyStatus":"private","selfDeclaredMadeForKids":False}}
 
 def main():
     if os.getenv("RANK_PUBLISH_APPROVED") != "YES":
@@ -46,25 +46,25 @@ def main():
                         scopes=["https://www.googleapis.com/auth/youtube.upload",
                                 "https://www.googleapis.com/auth/youtube.readonly"])
     creds.refresh(Request())
-    with build("youtube","v3",credentials=creds,cache_discovery=False) as youtube:
-        channel = youtube.channels().list(part="id,snippet",mine=True).execute()
-        items = channel.get("items",[])
-        if len(items)!=1:
-            raise RuntimeError("OAuth must resolve to exactly one YouTube channel")
-        actual = items[0]["id"]
-        expected = os.getenv("YOUTUBE_CHANNEL_ID","").strip()
-        if not expected or actual != expected:
-            raise RuntimeError("Wrong YouTube channel: expected configured channel ID")
-        media = MediaFileUpload(str(path),mimetype="video/mp4",resumable=True,chunksize=8*1024*1024)
-        request = youtube.videos().insert(part="snippet,status",body=body,media_body=media)
-        result = None
-        while result is None:
-            _,result = request.next_chunk()
+    youtube = build("youtube","v3",credentials=creds,cache_discovery=False)
+    channel = youtube.channels().list(part="id,snippet",mine=True).execute()
+    items = channel.get("items",[])
+    if len(items)!=1:
+        raise RuntimeError("OAuth must resolve to exactly one YouTube channel")
+    actual = items[0]["id"]
+    expected = os.getenv("YOUTUBE_CHANNEL_ID","").strip()
+    if not expected or actual != expected:
+        raise RuntimeError("Wrong YouTube channel: expected configured channel ID")
+    media = MediaFileUpload(str(path),mimetype="video/mp4",resumable=True,chunksize=8*1024*1024)
+    request = youtube.videos().insert(part="snippet,status",body=body,media_body=media)
+    result = None
+    while result is None:
+        _,result = request.next_chunk()
     video_id = result["id"]
     Path("out/youtube_publish.json").write_text(json.dumps({
         "video_id":video_id,"channel_id":actual,"url":"https://www.youtube.com/watch?v="+video_id
     },indent=2))
-    print("Published video: https://www.youtube.com/watch?v="+video_id)
+    print("Uploaded PRIVATE video for review: https://www.youtube.com/watch?v="+video_id)
 
 if __name__=="__main__":
     main()
