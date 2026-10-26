@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only validation of Pexels key, YouTube OAuth and destination channel.
+"""Read-only validation of YouTube OAuth and destination channel; optional Pexels key.
 
 This script never uploads videos and never prints tokens or API keys.
 """
@@ -13,23 +13,25 @@ def fail(message):
     raise SystemExit("NOT_READY: "+message)
 
 def main():
-    required=("PEXELS_API_KEY","YOUTUBE_CLIENT_ID","YOUTUBE_CLIENT_SECRET",
-              "YOUTUBE_REFRESH_TOKEN")
+    required=("YOUTUBE_CLIENT_ID","YOUTUBE_CLIENT_SECRET","YOUTUBE_REFRESH_TOKEN")
     missing=[key for key in required if not os.getenv(key)]
     if missing:
         fail("Missing repository secrets/variable: "+", ".join(missing))
-    pexels=urllib.request.Request(
-        "https://api.pexels.com/videos/search?query=surfing&orientation=portrait&per_page=1",
-        headers={"Authorization":os.environ["PEXELS_API_KEY"],
-                 "User-Agent":"RankingShorts/1.0"})
-    try:
-        with urllib.request.urlopen(pexels,timeout=25) as response:
-            payload=json.load(response)
-        if not payload.get("videos"):
-            fail("Pexels key works, but no video results")
-    except Exception as error:
-        fail("Pexels connection failed: "+type(error).__name__)
-    print("OK: Pexels API key and video search")
+    if os.getenv("PEXELS_API_KEY"):
+        pexels=urllib.request.Request(
+            "https://api.pexels.com/videos/search?query=surfing&orientation=portrait&per_page=1",
+            headers={"Authorization":os.environ["PEXELS_API_KEY"],
+                     "User-Agent":"RankingShorts/1.0"})
+        try:
+            with urllib.request.urlopen(pexels,timeout=25) as response:
+                payload=json.load(response)
+            if not payload.get("videos"):
+                fail("Pexels key works, but no video results")
+        except Exception as error:
+            fail("Pexels connection failed: "+type(error).__name__)
+        print("OK: Optional Pexels API key and video search")
+    else:
+        print("SKIP: Optional Pexels key not configured; real-viral YouTube check continues")
     from google.oauth2.credentials import Credentials
     from google.auth.transport.requests import Request
     from googleapiclient.discovery import build
