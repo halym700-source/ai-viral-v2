@@ -1,0 +1,35 @@
+{
+  "title": "RANKING BEST CITY STREET MOMENTS",
+  "clips": [
+    {
+      "rank": 5,
+      "source": "https://www.pexels.com/video/people-waiting-to-cross-the-street-on-the-pedestrian-lane-2836277/",
+      "license": "Pexels License; original creator credited on Pexels",
+      "label": "CROSSWALK"
+    },
+    {
+      "rank": 4,
+      "source": "https://www.pexels.com/video/lively-urban-scene-with-diverse-pedestrians-37567255/",
+      "license": "Pexels License; original creator credited on Pexels",
+      "label": "STREET STYLE"
+    },
+    {
+      "rank": 3,
+      "source": "https://www.pexels.com/video/vibrant-city-street-with-people-strolling-30507204/",
+      "license": "Pexels License; original creator credited on Pexels",
+      "label": "BIKES & DOGS"
+    },
+    {
+      "rank": 2,
+      "source": "https://www.pexels.com/video/busy-city-intersection-with-pedestrians-crossing-33865608/",
+      "license": "Pexels License; original creator credited on Pexels",
+      "label": "INTERSECTION"
+    },
+    {
+      "rank": 1,
+      "source": "https://www.pexels.com/video/traffic-in-a-city-5681670/",
+      "license": "Pexels License; original creator credited on Pexels",
+      "label": "RUSH HOUR"
+    }
+  ]
+}
