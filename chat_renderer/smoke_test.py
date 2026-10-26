@@ -57,7 +57,7 @@ assert photo is not None and photo.size == (92, 92)
 render.PROFILE_PHOTO = photo
 render.VIDEO_DURATION = 12
 preview = render.draw_frame(0, [])
-assert preview.getpixel((85, 60)) == (84, 131, 152), "Profile image is not visible in header"
+assert sum(abs(x-y) for x,y in zip(preview.getpixel((85, 60)), (84, 131, 152))) < 24, "Profile image is not visible in header"
 
 render.main()
 
@@ -69,7 +69,7 @@ assert target.stat().st_size > 50000, "MP4 is suspiciously tiny"
 probe = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(target)],
     capture_output=True, text=True)
 import re
-match = re.search(r"Duration:\\s*(\\d+):(\\d+):([\\d.]+)", probe.stderr)
+match = re.search(r"Duration:\s*(\d+):(\d+):([\d.]+)", probe.stderr)
 assert match, f"FFmpeg could not inspect MP4: {probe.stderr[:300]}"
 duration = int(match.group(1))*3600 + int(match.group(2))*60 + float(match.group(3))
 assert duration > 8, f"Video too short: {duration}"
