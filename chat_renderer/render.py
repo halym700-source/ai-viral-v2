@@ -23,8 +23,11 @@ import urllib.error
 import edge_tts
 from PIL import Image, ImageDraw, ImageFont
 from pydub import AudioSegment
+from pydub.generators import Sine
 
-W, H, FPS = 720, 1280, 20
+W, H, FPS = 720, 1280, int(os.environ.get('CHAT_RENDER_FPS', '20'))
+if FPS < 4 or FPS > 30:
+    raise ValueError('CHAT_RENDER_FPS must be between 4 and 30')
 OUT = Path("out")
 OUT.mkdir(exist_ok=True)
 TMP = OUT / "tts"
@@ -248,6 +251,15 @@ def gemini_voice_blocking(index, msg):
     raise RuntimeError("Gemini TTS failed")
 
 async def generate_voice(index, msg):
+    # Local and CI visual test mode never calls paid/remote speech services.
+    # The production GitHub workflow does not set this variable.
+    if os.environ.get("CHAT_TEST_MODE", "0") == "1":
+        output = TMP / f"{index:03d}.wav"
+        duration = 600 + min(300, len(msg["text"]) * 5)
+        test_tone = Sine(220 + (index % 4) * 70).to_audio_segment(
+            duration=duration).apply_gain(-23)
+        test_tone.export(str(output), format="wav")
+        return output
     if TTS_PROVIDER == "gemini":
         # One request per message preserves exact visual/audio synchronization.
         # It incurs API usage cost; do not enable without consent.
