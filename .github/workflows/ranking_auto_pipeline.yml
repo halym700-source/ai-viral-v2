@@ -11,6 +11,14 @@ on:
         options:
           - preview
           - publish
+      source_mode:
+        description: Approved real viral footage, or optional licensed stock demo (preview only)
+        type: choice
+        required: true
+        default: approved_real_viral
+        options:
+          - approved_real_viral
+          - licensed_stock_demo
       topic_index:
         description: Optional topic index (0-5); blank uses automatic rotation
         type: string
@@ -66,13 +74,23 @@ jobs:
       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       RANK_DATE: ${{ needs.gate.outputs.date }}
       RANK_TOPIC_INDEX: ${{ inputs.topic_index }}
+      RANK_SOURCE_MODE: ${{ inputs.source_mode }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Select licensed vertical clips
+      - name: Validate and select approved authentic viral footage
+        if: github.event_name == 'schedule' || inputs.source_mode != 'licensed_stock_demo'
+        run: python ranking_renderer/approved_manifest.py
+      - name: Select optional licensed stock demo clips
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'preview' && inputs.source_mode == 'licensed_stock_demo'
         run: python ranking_renderer/source_pexels.py
+      - name: Reject stock-demo publishing
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'publish' && inputs.source_mode == 'licensed_stock_demo'
+        run: |
+          echo "Stock demo may only be previewed, not uploaded." >&2
+          exit 1
       - name: Install rendering dependencies
         run: |
           python -m pip install --disable-pip-version-check pillow==11.3.0 imageio-ffmpeg==0.6.0 edge-tts==7.3.1
