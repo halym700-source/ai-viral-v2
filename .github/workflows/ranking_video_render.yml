@@ -1,0 +1,46 @@
+name: Ranking Shorts Renderer
+run-name: Ranking ${{ inputs.job_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: Unique ID for a new ranking render
+        required: true
+        type: string
+      manifest_json:
+        description: JSON containing five licensed clips and ranking title
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ranking-${{ inputs.job_id }}
+  cancel-in-progress: false
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install fast FFmpeg build and narration
+        run: |
+          python -m pip install --disable-pip-version-check pillow==11.3.0 imageio-ffmpeg==0.6.0 edge-tts==7.3.1
+          mkdir -p "$RUNNER_TEMP/rank-bin"
+          ln -sf "$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" "$RUNNER_TEMP/rank-bin/ffmpeg"
+          echo "$RUNNER_TEMP/rank-bin" >> "$GITHUB_PATH"
+      - name: Render five-clip video
+        env:
+          RANKING_JSON: ${{ inputs.manifest_json }}
+        run: python ranking_renderer/render.py
+      - name: Upload completed video for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: ranking-${{ inputs.job_id }}
+          path: |
+            out/ranking_short.mp4
+            out/ranking_sources.json
+          if-no-files-found: error
+          retention-days: 3
