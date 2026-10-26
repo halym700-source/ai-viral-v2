@@ -43,7 +43,8 @@ def main():
                         token_uri="https://oauth2.googleapis.com/token",
                         client_id=os.environ["YOUTUBE_CLIENT_ID"],
                         client_secret=os.environ["YOUTUBE_CLIENT_SECRET"],
-                        scopes=["https://www.googleapis.com/auth/youtube.upload"])
+                        scopes=["https://www.googleapis.com/auth/youtube.upload",
+                                "https://www.googleapis.com/auth/youtube.readonly"])
     creds.refresh(Request())
     with build("youtube","v3",credentials=creds,cache_discovery=False) as youtube:
         channel = youtube.channels().list(part="id,snippet",mine=True).execute()
