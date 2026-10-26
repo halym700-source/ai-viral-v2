@@ -8,6 +8,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
+from pydub import AudioSegment
 
 os.environ["CHAT_TEST_MODE"] = "1"
 os.environ["CHAT_RENDER_FPS"] = "4"
