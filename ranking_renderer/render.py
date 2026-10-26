@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Five-to-one licensed video rankings, separate from TextVibe Shorts."""
-import json, os, re, subprocess, tempfile, urllib.request, urllib.parse, sys
+import json, os, re, subprocess, tempfile, urllib.request, urllib.parse, urllib.error, sys, time, email.utils, datetime
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
@@ -85,20 +85,44 @@ def draw_card(path, title, label, rank, brand, w, h):
 def download(url, path):
     p=urllib.parse.urlsplit(url)
     if p.scheme!="https" or not p.hostname or p.username or p.password:
-        raise ValueError("Clips require public HTTPS direct MP4 URLs")
+        raise ValueError("Clips require public HTTPS direct media URLs")
     host=p.hostname.lower()
     if host in ("localhost","127.0.0.1","0.0.0.0") or host.endswith(".local"):
         raise ValueError("Private hosts are disallowed")
-    req=urllib.request.Request(url,headers={"User-Agent":"RankingShorts/1.0"})
-    with urllib.request.urlopen(req,timeout=40) as res, path.open("wb") as dst:
-        count=0
-        while True:
-            buf=res.read(1024*1024)
-            if not buf:break
-            count+=len(buf)
-            if count>180*1024*1024: raise ValueError("Clip too large")
-            dst.write(buf)
-    if count<1024:raise ValueError("Clip is empty")
+    # Commons can rate-limit shared GitHub Actions IPs. Respect Retry-After
+    # and retry a bounded number of times instead of failing on first 429.
+    req=urllib.request.Request(url,headers={
+        "User-Agent":"ReshRanksPreview/1.0 (https://github.com/halym700-source/ai-viral-v2)",
+        "Accept":"video/*,application/octet-stream;q=0.9,*/*;q=0.5",
+    })
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req,timeout=60) as res, path.open("wb") as dst:
+                count=0
+                while True:
+                    buf=res.read(1024*1024)
+                    if not buf:break
+                    count+=len(buf)
+                    if count>180*1024*1024:
+                        raise ValueError("Clip too large")
+                    dst.write(buf)
+            if count<1024:
+                raise ValueError("Clip is empty")
+            return
+        except urllib.error.HTTPError as exc:
+            path.unlink(missing_ok=True)
+            if exc.code != 429 or attempt == 2:
+                raise
+            raw=exc.headers.get("Retry-After","")
+            try:
+                wait=max(15,min(120,int(raw)))
+            except ValueError:
+                wait=30*(attempt+1)
+            print(f"Source rate limited (429). Respecting Retry-After: waiting {wait}s before retry {attempt+2}/3",flush=True)
+            time.sleep(wait)
+        except Exception:
+            path.unlink(missing_ok=True)
+            raise
 
 def intro_voice(text, path):
     if os.getenv("RANK_TEST_MODE")=="1":
