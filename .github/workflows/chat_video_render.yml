@@ -36,8 +36,7 @@ jobs:
           python-version: '3.11'
       - name: Install render dependencies
         run: |
-          sudo apt-get update -y
-          sudo apt-get install -y ffmpeg
+          # Use preinstalled ffmpeg: apt mirrors previously stalled 10+ minutes.
           command -v ffmpeg
           command -v ffprobe
           ffmpeg -version | head -n 1
