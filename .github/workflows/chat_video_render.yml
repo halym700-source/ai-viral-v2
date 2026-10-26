@@ -47,6 +47,9 @@ jobs:
         env:
           CHAT_LANG: ${{ inputs.lang }}
           CHAT_JSON: ${{ inputs.dialogue_json }}
+          CHAT_TTS_PROVIDER: ${{ vars.CHAT_TTS_PROVIDER || 'edge' }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_TTS_MODEL: ${{ vars.GEMINI_TTS_MODEL || 'gemini-3.8-flash-tts' }}
         run: python chat_renderer/render.py
       - name: Upload finished video artifact
         uses: actions/upload-artifact@v4
