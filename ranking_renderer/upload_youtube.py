@@ -54,8 +54,16 @@ def main():
     actual = items[0]["id"]
     configured = json.loads(Path("ranking_renderer/channel_config.json").read_text())
     expected = (os.getenv("YOUTUBE_CHANNEL_ID") or configured.get("channel_id") or "").strip()
-    if not expected or actual != expected:
-        raise RuntimeError("Wrong YouTube channel: expected configured channel ID")
+    handle = str(configured.get("channel_handle") or "").strip()
+    if expected:
+        if actual != expected:
+            raise RuntimeError("Wrong YouTube channel: expected configured channel ID")
+    elif handle:
+        matched = youtube.channels().list(part="id", forHandle=handle).execute().get("items", [])
+        if len(matched) != 1 or matched[0].get("id") != actual:
+            raise RuntimeError("OAuth YouTube channel does not match configured handle")
+    else:
+        raise RuntimeError("Destination channel ID or handle is missing")
     media = MediaFileUpload(str(path),mimetype="video/mp4",resumable=True,chunksize=8*1024*1024)
     request = youtube.videos().insert(part="snippet,status",body=body,media_body=media)
     result = None
