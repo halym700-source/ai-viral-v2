@@ -9,7 +9,7 @@ permissions:
 jobs:
   make-demo:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -17,18 +17,26 @@ jobs:
           python-version: '3.11'
       - name: Install renderer dependencies
         run: |
-          python -m pip install --disable-pip-version-check pillow==11.3.0 imageio-ffmpeg==0.6.0
+          python -m pip install --disable-pip-version-check pillow==11.3.0 imageio-ffmpeg==0.6.0 edge-tts==7.3.1
           mkdir -p "$RUNNER_TEMP/rank-bin"
           ln -sf "$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" "$RUNNER_TEMP/rank-bin/ffmpeg"
           echo "$RUNNER_TEMP/rank-bin" >> "$GITHUB_PATH"
-      - name: Produce 24-second demo
-        run: python ranking_renderer/smoke_test.py
-      - name: Publish demo MP4 at permanent raw URL
+      - name: Choose five real openly licensed sports clips
+        run: python ranking_renderer/source_commons_demo.py
+      - name: Render ranking short with revised reference-inspired graphics
+        env:
+          RANKING_MANIFEST: out/ranking_manifest.json
+          RANK_WIDTH: '540'
+          RANK_HEIGHT: '960'
+          RANK_FPS: '24'
+        run: python ranking_renderer/render.py
+      - name: Publish playable demo and clip credits
         run: |
           mkdir -p previews
-          cp out/ranking_short.mp4 previews/ranking_demo.mp4
+          cp out/ranking_short.mp4 previews/ranking_demo_v2.mp4
+          cp out/ranking_sources.json previews/ranking_demo_v2_sources.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f previews/ranking_demo.mp4
-          git commit -m "Publish mobile-playable 24-second ranking preview"
+          git add -f previews/ranking_demo_v2.mp4 previews/ranking_demo_v2_sources.json
+          git commit -m "Publish ranking demo v2 with real licensed sports clips and compact ranking graphics"
           git push
