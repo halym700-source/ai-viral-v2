@@ -185,26 +185,31 @@ def main():
              "-i",str(listing),"-c","copy",str(joined)])
         speech=Path(os.environ["RANKING_INTRO_AUDIO"]) if os.getenv("RANKING_INTRO_AUDIO") else intro_voice(intro,tmp/"intro.mp3")
         video=OUT/"ranking_short.mp4"
-        # A short, original rank-change chime at 5, 4, 3, 2, and 1.
-        # Reuse the same sound at each exact segment boundary.
-        cue_times=[round(i*seconds*1000) for i in range(5)]
-        effect_filters=["[2:a]asplit=5"+ "".join(f"[cue{i}]" for i in range(5))]
-        for i,ms in enumerate(cue_times):
-            effect_filters.append(
-                f"[cue{i}]afade=t=out:st=0.07:d=0.19,volume=0.55,"
-                f"adelay={ms}:all=1[hit{i}]"
-            )
-        effect_filters.append(
-            "".join(f"[hit{i}]" for i in range(5))
-            +"amix=inputs=5:duration=longest:normalize=0[sfx]"
-        )
-        effect_filters.append("[0:a]volume='if(lt(t,3),0.30,0.72)':eval=frame[bg]")
-        effect_filters.append("[1:a]adelay=180:all=1,volume=1.5[tts]")
-        effect_filters.append("[bg][tts][sfx]amix=inputs=3:duration=first:dropout_transition=0[a]")
-        mix=";".join(effect_filters)
+        # Three-layer original transition: bright cue, short whoosh, low punch.
+        # Identical timing and sound design for each of ranks 5,4,3,2,1.
+        delays=[round(i*seconds*1000) for i in range(5)]
+        filters=[]
+        for input_index,prefix in ((2,"beep"),(3,"whoosh"),(4,"punch")):
+            filters.append(f"[{input_index}:a]asplit=5"+ "".join(f"[{prefix}{i}]" for i in range(5)))
+            for i,ms in enumerate(delays):
+                if prefix=="beep":
+                    effect="afade=t=out:st=0.06:d=0.19,volume=0.38"
+                elif prefix=="whoosh":
+                    effect="highpass=f=500,afade=t=out:st=0.03:d=0.18,volume=0.16"
+                else:
+                    effect="afade=t=out:st=0.01:d=0.16,volume=0.25"
+                filters.append(f"[{prefix}{i}]{effect},adelay={ms}:all=1[{prefix}hit{i}]")
+        inputs="".join(f"[{prefix}hit{i}]" for prefix in ("beep","whoosh","punch") for i in range(5))
+        filters.append(inputs+"amix=inputs=15:duration=longest:normalize=0[sfx]")
+        filters.append("[0:a]volume='if(lt(t,3),0.30,0.72)':eval=frame[bg]")
+        filters.append("[1:a]adelay=180:all=1,volume=1.5[tts]")
+        filters.append("[bg][tts][sfx]amix=inputs=3:duration=first:dropout_transition=0[a]")
+        mix=";".join(filters)
         run([FF,"-y","-hide_banner","-loglevel","error",
              "-i",str(joined),"-i",str(speech),
-             "-f","lavfi","-i","sine=frequency=940:sample_rate=44100:duration=0.26",
+             "-f","lavfi","-i","sine=frequency=940:sample_rate=44100:duration=0.25",
+             "-f","lavfi","-i","anoisesrc=color=pink:sample_rate=44100:duration=0.21",
+             "-f","lavfi","-i","sine=frequency=125:sample_rate=44100:duration=0.17",
              "-filter_complex",mix,"-map","0:v:0","-map","[a]","-c:v","copy",
              "-c:a","aac","-b:a","160k","-movflags","+faststart",str(video)])
     (OUT/"ranking_sources.json").write_text(json.dumps({"title":title,"clips":records},indent=2))
