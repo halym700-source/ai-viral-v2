@@ -1,0 +1,31 @@
+name: Polar Ranks Reference Time Probe
+on:
+  push:
+    paths:
+      - '.github/workflows/polar_reference_probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reference-time:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check public Polar Ranks RSS publication times
+        shell: bash
+        run: |
+          python - <<'PY'
+          import urllib.request,xml.etree.ElementTree as ET
+          url="https://www.youtube.com/feeds/videos.xml?channel_id=UCnqtwXNVh-EzU8fYcxGhSnA"
+          try:
+            request=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'})
+            with urllib.request.urlopen(request,timeout=15) as response:
+              data=response.read(300000)
+            root=ET.fromstring(data)
+            ns={'a':'http://www.w3.org/2005/Atom','yt':'http://www.youtube.com/xml/schemas/2015'}
+            for entry in root.findall('a:entry',ns)[:12]:
+              print('REFERENCE',entry.findtext('a:published',default='unknown',namespaces=ns),
+                    entry.findtext('a:title',default='?',namespaces=ns))
+          except Exception as error:
+            print('REFERENCE_TIME_UNVERIFIED:',type(error).__name__,str(error)[:300])
+          PY
