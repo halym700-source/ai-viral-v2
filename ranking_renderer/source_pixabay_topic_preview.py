@@ -101,15 +101,27 @@ def main():
         # Probe the ORIGINAL audio stream in each source. Do not accept a
         # silent source or add a synthetic motorcycle soundtrack instead.
         def probe(v):
+            dest=OUT/("source_"+str(v["id"])+".mp4")
             try:
-                p=subprocess.run(["ffmpeg","-hide_banner","-nostdin","-rw_timeout","12000000",
-                                  "-i",v["url"]],capture_output=True,text=True,timeout=18)
-                if "Audio:" in p.stderr:return v
-                print("Audio probe no track",v["id"],"code",p.returncode,"diagnostic",p.stderr[-220:].replace("\\n"," "),flush=True)
-                return None
+                req=urllib.request.Request(v["url"],headers={"User-Agent":"ReshRanksTopicPreview/1.0"})
+                with urllib.request.urlopen(req,timeout=40) as src,dest.open("wb") as dst:
+                    size=0
+                    while True:
+                        chunk=src.read(1024*1024)
+                        if not chunk:break
+                        size+=len(chunk)
+                        if size>90_000_000:raise ValueError("Video too large")
+                        dst.write(chunk)
+                p=subprocess.run(["ffmpeg","-hide_banner","-i",str(dest)],
+                                 capture_output=True,text=True,timeout=15)
+                if "Audio:" in p.stderr:
+                    v["file"]=str(dest)
+                    return v
+                print("Silent source",v["id"],flush=True)
             except Exception as exc:
-                print("Audio probe exception",v["id"],str(exc)[:180],flush=True)
-                return None
+                print("Audio verification failed",v["id"],str(exc)[:140],flush=True)
+            dest.unlink(missing_ok=True)
+            return None
         with ThreadPoolExecutor(max_workers=8) as pool:
             futures={pool.submit(probe,v):v for v in candidates[:120]}
             verified=[v for f in as_completed(futures) if (v:=f.result())]
@@ -127,7 +139,7 @@ def main():
                           "selected":len(chosen),"unique_creators":len({v["user"] for v in chosen}),
                           "selected_tags":[v["tags"] for v in chosen]}),flush=True)
         if len(chosen)<5:continue
-        clips=[{"rank":rank,"url":v["url"],"start":0,"label":topic["label"],
+        clips=[{"rank":rank,"file":v["file"],"start":0,"label":topic["label"],
                 "source":v["page"],"license":"Pixabay Content License; confirm source details",
                 "creator":v["user"],"tags":v["tags"],"require_original_audio":True}
                for rank,v in zip(range(5,0,-1),chosen)]
