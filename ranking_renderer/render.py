@@ -168,6 +168,7 @@ def main():
             cmd=[FF,"-y","-hide_banner","-loglevel","error","-stream_loop","-1",
                  "-ss",str(start),"-i",str(path),"-loop","1","-i",str(card)]
             audio=has_audio(path)
+            print(f"Rank {c['rank']} original audio track: {'YES' if audio else 'NO (source silent)'}",flush=True)
             if not audio:cmd+=["-f","lavfi","-i","anullsrc=channel_layout=stereo:sample_rate=44100"]
             v=(f"[0:v]scale={w}:{h}:force_original_aspect_ratio=increase,"
                f"crop={w}:{h},fps={fps},setsar=1[v0];[v0][1:v]overlay=0:0:shortest=1[v]")
@@ -177,7 +178,8 @@ def main():
                   "-b:a","128k","-shortest",str(segment)]
             run(cmd);segments.append(segment)
             records.append({"rank":int(c["rank"]),"source":c.get("source",str(path)),
-                            "license":c.get("license","synthetic CI test"),"label":c.get("label","")})
+                            "license":c.get("license","synthetic CI test"),"label":c.get("label",""),
+                            "original_audio_track":audio})
         listing=tmp/"concat.txt"
         listing.write_text("".join("file '"+str(p)+"'\n" for p in segments))
         joined=tmp/"joined.mp4"
@@ -193,16 +195,16 @@ def main():
             filters.append(f"[{input_index}:a]asplit=5"+ "".join(f"[{prefix}{i}]" for i in range(5)))
             for i,ms in enumerate(delays):
                 if prefix=="beep":
-                    effect="afade=t=out:st=0.06:d=0.19,volume=0.38"
+                    effect="afade=t=out:st=0.06:d=0.19,volume=0.24"
                 elif prefix=="whoosh":
-                    effect="highpass=f=500,afade=t=out:st=0.03:d=0.18,volume=0.16"
+                    effect="highpass=f=500,afade=t=out:st=0.03:d=0.18,volume=0.10"
                 else:
-                    effect="afade=t=out:st=0.01:d=0.16,volume=0.25"
+                    effect="afade=t=out:st=0.01:d=0.16,volume=0.15"
                 filters.append(f"[{prefix}{i}]{effect},adelay={ms}:all=1[{prefix}hit{i}]")
         inputs="".join(f"[{prefix}hit{i}]" for prefix in ("beep","whoosh","punch") for i in range(5))
         filters.append(inputs+"amix=inputs=15:duration=longest:normalize=0[sfx]")
-        filters.append("[0:a]volume='if(lt(t,3),0.30,0.72)':eval=frame[bg]")
-        filters.append("[1:a]adelay=180:all=1,volume=1.5[tts]")
+        filters.append("[0:a]volume='if(lt(t,3),0.80,1.00)':eval=frame[bg]")
+        filters.append("[1:a]adelay=180:all=1,volume=0.95[tts]")
         filters.append("[bg][tts][sfx]amix=inputs=3:duration=first:dropout_transition=0[a]")
         mix=";".join(filters)
         run([FF,"-y","-hide_banner","-loglevel","error",
