@@ -21,7 +21,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/rank-bin"
           ln -sf "$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" "$RUNNER_TEMP/rank-bin/ffmpeg"
           echo "$RUNNER_TEMP/rank-bin" >> "$GITHUB_PATH"
-      - name: Verify five motorcycle clips contain their own original sound
+      - name: Verify five motorcycle clips contain their own original sound (diagnostics)
         env:
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           RANK_TOPIC_INDEX: '0'
