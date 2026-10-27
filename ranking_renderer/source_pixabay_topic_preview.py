@@ -9,6 +9,8 @@ import datetime as dt
 import json
 import os
 import re
+import subprocess
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -83,7 +85,7 @@ def main():
     indices=[rotation%len(TOPICS)] if idx.isdigit() else [(rotation+o)%len(TOPICS) for o in range(len(TOPICS))]
     for topic_index in indices:
         topic=TOPICS[topic_index]
-        chosen=[];authors=set();seen=set();extra=[]
+        candidates=[];seen=set()
         for term in topic["queries"]:
             for page in (1,2):
                 try:
@@ -93,31 +95,45 @@ def main():
                     continue
                 for hit in data.get("hits",[]):
                     v=valid(hit,topic)
-                    if not v or v["id"] in seen:continue
-                    seen.add(v["id"])
-                    if v["user"] in authors:
-                        extra.append(v)
-                        continue
-                    authors.add(v["user"]);chosen.append(v)
-                    if len(chosen)==5:break
-                if len(chosen)==5:break
+                    if v and v["id"] not in seen:
+                        seen.add(v["id"]);candidates.append(v)
+        print(json.dumps({"topic":topic["title"],"metadata_candidates":len(candidates),"require_original_audio":True}),flush=True)
+        # Probe the ORIGINAL audio stream in each source. Do not accept a
+        # silent source or add a synthetic motorcycle soundtrack instead.
+        def probe(v):
+            try:
+                p=subprocess.run(["ffmpeg","-hide_banner","-nostdin","-rw_timeout","12000000",
+                                  "-i",v["url"]],capture_output=True,text=True,timeout=18)
+                return v if "Audio:" in p.stderr else None
+            except Exception:
+                return None
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            futures={pool.submit(probe,v):v for v in candidates[:120]}
+            verified=[v for f in as_completed(futures) if (v:=f.result())]
+        # Prefer different creators, then fill with additional distinct clips.
+        chosen=[];authors=set()
+        for v in verified:
+            if v["user"] not in authors:
+                chosen.append(v);authors.add(v["user"])
             if len(chosen)==5:break
         if len(chosen)<5:
-            for v in extra:
+            for v in verified:
+                if v not in chosen:chosen.append(v)
                 if len(chosen)==5:break
-                if sum(x["user"]==v["user"] for x in chosen)>=2:continue
-                chosen.append(v)
-        print(json.dumps({"topic":topic["title"],"qualified_clips":len(chosen),"unique_creators":len({v["user"] for v in chosen}),"chosen_tags":[v["tags"] for v in chosen]}),flush=True)
+        print(json.dumps({"topic":topic["title"],"audio_verified":len(verified),
+                          "selected":len(chosen),"unique_creators":len({v["user"] for v in chosen}),
+                          "selected_tags":[v["tags"] for v in chosen]}),flush=True)
         if len(chosen)<5:continue
         clips=[{"rank":rank,"url":v["url"],"start":0,"label":topic["label"],
                 "source":v["page"],"license":"Pixabay Content License; confirm source details",
-                "creator":v["user"],"tags":v["tags"]} for rank,v in zip(range(5,0,-1),chosen)]
+                "creator":v["user"],"tags":v["tags"],"require_original_audio":True}
+               for rank,v in zip(range(5,0,-1),chosen)]
         manifest={"title":topic["title"],"intro":topic["intro"],"brand":"RESHRANKS",
                   "clip_seconds":4.8,"clips":clips}
         (OUT/"ranking_manifest.json").write_text(json.dumps(manifest,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
         print(json.dumps({"topic":topic["title"],"clips":5,"creators":len({v["user"] for v in chosen}),
                           "source":"Pixabay video API","preview_only":True}),flush=True)
         return
-    raise RuntimeError("Could not find five distinct real-camera action videos on one topic. Unrelated filler is forbidden.")
+    raise RuntimeError("Could not verify five real motorcycle action clips WITH original audio. Silent substitutes are forbidden.")
 
 if __name__=="__main__":main()
