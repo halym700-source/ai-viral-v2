@@ -1,4 +1,4 @@
-name: Motorcycle Stunts Licensed Preview
+name: Motorcycle Original Audio Commons Preview
 on:
   push:
     paths:
@@ -21,21 +21,19 @@ jobs:
           mkdir -p "$RUNNER_TEMP/rank-bin"
           ln -sf "$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" "$RUNNER_TEMP/rank-bin/ffmpeg"
           echo "$RUNNER_TEMP/rank-bin" >> "$GITHUB_PATH"
-      - name: Download and verify five motorcycle clips have genuine original sound
-        env:
-          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
-          RANK_TOPIC_INDEX: '0'
-        run: python ranking_renderer/source_pixabay_topic_preview.py
+      - name: Prepare five CC licensed motorcycle videos with original audio
+        run: python ranking_renderer/source_wikimedia_motorcycle_audio.py
       - name: Render 24-second Shorts with mandatory original sound on every clip
         env:
           RANKING_MANIFEST: out/ranking_manifest.json
         run: python ranking_renderer/render.py
       - uses: actions/upload-artifact@v4
         with:
-          name: motorcycle-stunts-preview-${{ github.run_id }}
+          name: motorcycle-original-audio-${{ github.run_id }}
           path: |
             out/ranking_short.mp4
             out/ranking_sources.json
+            out/ATTRIBUTION.txt
             out/ranking_manifest.json
           retention-days: 7
           if-no-files-found: error
