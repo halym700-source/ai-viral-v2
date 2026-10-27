@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Find five real motorcycle stunt or action videos, no unrelated substitutes
+      - name: Select five action-only motorcycle scenes; reject traffic and scooters
         env:
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           RANK_TOPIC_INDEX: '0'
