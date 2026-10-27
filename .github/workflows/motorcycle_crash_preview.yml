@@ -1,4 +1,4 @@
-name: Motorcycle Crashes Licensed Preview
+name: Motorcycle Stunts Licensed Preview
 on:
   push:
     paths:
@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Find five real motorcycle crash videos, no unrelated substitutes
+      - name: Find five real motorcycle stunt or action videos, no unrelated substitutes
         env:
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           RANK_TOPIC_INDEX: '0'
@@ -32,7 +32,7 @@ jobs:
         run: python ranking_renderer/render.py
       - uses: actions/upload-artifact@v4
         with:
-          name: motorcycle-crashes-preview-${{ github.run_id }}
+          name: motorcycle-stunts-preview-${{ github.run_id }}
           path: |
             out/ranking_short.mp4
             out/ranking_sources.json
