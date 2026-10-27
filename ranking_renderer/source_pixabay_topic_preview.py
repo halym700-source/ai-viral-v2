@@ -21,7 +21,7 @@ TOPICS=[
      "must":r"\b(motorcycle|motorbike|motorbikes|motorcycles|biker|bikers|motocross|dirt bike)\b",
      "reject":r"\b(animation|cgi|simulation|toy|game|bicycle|motorcycle helmet|motorcycle repair)\b",
      "label":"MOTORCYCLE MOMENT",
-     "event":r"\b(stunt|jump|race|racing|speed|motocross|offroad|off-road|wheelie|track|drift|trick|dirt bike|motorcycle sport|motorcycle sports|action)\b"},
+     "event":r"\b(stunt|jump|race|racing|motocross|offroad|off-road|wheelie|drift|trick|dirt bike|enduro|freestyle)\b"},
     {"title":"RANKING WILDEST SKATEBOARD TRICKS","intro":"Ranking wildest skateboard tricks",
      "queries":["skateboard","skateboarding","skate trick"],
      "must":r"\b(skateboard|skateboarding|skate|skater|skating)\b",
@@ -83,7 +83,7 @@ def main():
     indices=[rotation%len(TOPICS)] if idx.isdigit() else [(rotation+o)%len(TOPICS) for o in range(len(TOPICS))]
     for topic_index in indices:
         topic=TOPICS[topic_index]
-        chosen=[];authors=set();seen=set()
+        chosen=[];authors=set();seen=set();extra=[]
         for term in topic["queries"]:
             for page in (1,2):
                 try:
@@ -93,12 +93,21 @@ def main():
                     continue
                 for hit in data.get("hits",[]):
                     v=valid(hit,topic)
-                    if not v or v["id"] in seen or v["user"] in authors:continue
-                    seen.add(v["id"]);authors.add(v["user"]);chosen.append(v)
+                    if not v or v["id"] in seen:continue
+                    seen.add(v["id"])
+                    if v["user"] in authors:
+                        extra.append(v)
+                        continue
+                    authors.add(v["user"]);chosen.append(v)
                     if len(chosen)==5:break
                 if len(chosen)==5:break
             if len(chosen)==5:break
-        print(json.dumps({"topic":topic["title"],"qualified_unique_creators":len(chosen),"chosen_tags":[v["tags"] for v in chosen]}),flush=True)
+        if len(chosen)<5:
+            for v in extra:
+                if len(chosen)==5:break
+                if sum(x["user"]==v["user"] for x in chosen)>=2:continue
+                chosen.append(v)
+        print(json.dumps({"topic":topic["title"],"qualified_clips":len(chosen),"unique_creators":len({v["user"] for v in chosen}),"chosen_tags":[v["tags"] for v in chosen]}),flush=True)
         if len(chosen)<5:continue
         clips=[{"rank":rank,"url":v["url"],"start":0,"label":topic["label"],
                 "source":v["page"],"license":"Pixabay Content License; confirm source details",
@@ -106,9 +115,9 @@ def main():
         manifest={"title":topic["title"],"intro":topic["intro"],"brand":"RESHRANKS",
                   "clip_seconds":4.8,"clips":clips}
         (OUT/"ranking_manifest.json").write_text(json.dumps(manifest,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
-        print(json.dumps({"topic":topic["title"],"clips":5,"creators":5,
+        print(json.dumps({"topic":topic["title"],"clips":5,"creators":len({v["user"] for v in chosen}),
                           "source":"Pixabay video API","preview_only":True}),flush=True)
         return
-    raise RuntimeError("Could not find five camera-footage videos by distinct creators on one topic. Unrelated filler is forbidden.")
+    raise RuntimeError("Could not find five distinct real-camera action videos on one topic. Unrelated filler is forbidden.")
 
 if __name__=="__main__":main()
