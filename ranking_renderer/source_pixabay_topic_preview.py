@@ -104,8 +104,11 @@ def main():
             try:
                 p=subprocess.run(["ffmpeg","-hide_banner","-nostdin","-rw_timeout","12000000",
                                   "-i",v["url"]],capture_output=True,text=True,timeout=18)
-                return v if "Audio:" in p.stderr else None
-            except Exception:
+                if "Audio:" in p.stderr:return v
+                print("Audio probe no track",v["id"],"code",p.returncode,"diagnostic",p.stderr[-220:].replace("\\n"," "),flush=True)
+                return None
+            except Exception as exc:
+                print("Audio probe exception",v["id"],str(exc)[:180],flush=True)
                 return None
         with ThreadPoolExecutor(max_workers=8) as pool:
             futures={pool.submit(probe,v):v for v in candidates[:120]}
