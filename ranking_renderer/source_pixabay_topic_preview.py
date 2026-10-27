@@ -16,6 +16,11 @@ from pathlib import Path
 KEY=os.getenv("PIXABAY_API_KEY","").strip()
 OUT=Path("out")
 TOPICS=[
+    {"title":"RANKING CRAZIEST MOTORCYCLE CRASHES","intro":"Ranking craziest motorcycle crashes",
+     "queries":["motorcycle crash","motorbike accident","motorcycle accident","motorbike crash"],
+     "must":r"\\b(motorcycle|motorbike|motorbikes|motorcycles|biker|bikers)\\b",
+     "reject":r"\\b(animation|cgi|simulation|toy|game|car crash|bicycle)\\b",
+     "label":"MOTORCYCLE CRASH","event":r"\\b(crash|crashes|accident|collision|collide|fall|falling|fallen|slip|sliding|wreck)\\b"},
     {"title":"RANKING WILDEST SKATEBOARD TRICKS","intro":"Ranking wildest skateboard tricks",
      "queries":["skateboard","skateboarding","skate trick"],
      "must":r"\b(skateboard|skateboarding|skate|skater|skating)\b",
@@ -51,6 +56,7 @@ def valid(hit,topic):
     tags=str(hit.get("tags") or "")
     if not re.search(topic["must"],tags,re.I):return False
     if re.search(topic["reject"],tags,re.I) or FAKE.search(tags):return False
+    if topic.get("event") and not re.search(topic["event"],tags,re.I):return False
     if hit.get("type") not in (None,"film"):return False
     if int(hit.get("duration") or 0)<5:return False
     user=hit.get("user_id") or hit.get("user")
@@ -73,8 +79,9 @@ def main():
     idx=os.getenv("RANK_TOPIC_INDEX","").strip()
     rotation=int(idx) if idx.isdigit() else dt.datetime.now(dt.timezone.utc).date().toordinal()
     OUT.mkdir(exist_ok=True)
-    for offset in range(len(TOPICS)):
-        topic=TOPICS[(rotation+offset)%len(TOPICS)]
+    indices=[rotation%len(TOPICS)] if idx.isdigit() else [(rotation+o)%len(TOPICS) for o in range(len(TOPICS))]
+    for topic_index in indices:
+        topic=TOPICS[topic_index]
         chosen=[];authors=set();seen=set()
         for term in topic["queries"]:
             for page in (1,2):
