@@ -16,11 +16,12 @@ from pathlib import Path
 KEY=os.getenv("PIXABAY_API_KEY","").strip()
 OUT=Path("out")
 TOPICS=[
-    {"title":"RANKING CRAZIEST MOTORCYCLE CRASHES","intro":"Ranking craziest motorcycle crashes",
-     "queries":["motorcycle crash","motorbike accident","motorcycle accident","motorbike crash"],
-     "must":r"\b(motorcycle|motorbike|motorbikes|motorcycles|biker|bikers)\b",
-     "reject":r"\b(animation|cgi|simulation|toy|game|car crash|bicycle)\b",
-     "label":"MOTORCYCLE CRASH","event":r"\b(crash|crashes|accident|collision|collide|fall|falling|fallen|slip|sliding|wreck)\b"},
+    {"title":"RANKING WILDEST MOTORCYCLE MOMENTS","intro":"Ranking wildest motorcycle moments",
+     "queries":["motorcycle stunt","motocross","motorcycle racing","dirt bike","motorcycle","motorbike"],
+     "must":r"\b(motorcycle|motorbike|motorbikes|motorcycles|biker|bikers|motocross|dirt bike)\b",
+     "reject":r"\b(animation|cgi|simulation|toy|game|bicycle|motorcycle helmet|motorcycle repair)\b",
+     "label":"MOTORCYCLE MOMENT",
+     "event":r"\b(stunt|jump|race|racing|speed|motocross|offroad|off-road|wheelie|track|drift|trick|dirt bike|motorcycle sport|motorcycle sports|action)\b"},
     {"title":"RANKING WILDEST SKATEBOARD TRICKS","intro":"Ranking wildest skateboard tricks",
      "queries":["skateboard","skateboarding","skate trick"],
      "must":r"\b(skateboard|skateboarding|skate|skater|skating)\b",
@@ -97,7 +98,7 @@ def main():
                     if len(chosen)==5:break
                 if len(chosen)==5:break
             if len(chosen)==5:break
-        print(json.dumps({"topic":topic["title"],"qualified_unique_creators":len(chosen)}),flush=True)
+        print(json.dumps({"topic":topic["title"],"qualified_unique_creators":len(chosen),"chosen_tags":[v["tags"] for v in chosen]}),flush=True)
         if len(chosen)<5:continue
         clips=[{"rank":rank,"url":v["url"],"start":0,"label":topic["label"],
                 "source":v["page"],"license":"Pixabay Content License; confirm source details",
