@@ -168,6 +168,8 @@ def main():
             cmd=[FF,"-y","-hide_banner","-loglevel","error","-stream_loop","-1",
                  "-ss",str(start),"-i",str(path),"-loop","1","-i",str(card)]
             audio=has_audio(path)
+            if c.get("require_original_audio") and not audio:
+                raise ValueError(f"Rank {c[\'rank\']} requires genuine source audio but the downloaded clip is silent")
             print(f"Rank {c['rank']} original audio track: {'YES' if audio else 'NO (source silent)'}",flush=True)
             if not audio:cmd+=["-f","lavfi","-i","anullsrc=channel_layout=stereo:sample_rate=44100"]
             v=(f"[0:v]scale={w}:{h}:force_original_aspect_ratio=increase,"
