@@ -18,9 +18,9 @@ OUT=Path("out")
 TOPICS=[
     {"title":"RANKING CRAZIEST MOTORCYCLE CRASHES","intro":"Ranking craziest motorcycle crashes",
      "queries":["motorcycle crash","motorbike accident","motorcycle accident","motorbike crash"],
-     "must":r"\\b(motorcycle|motorbike|motorbikes|motorcycles|biker|bikers)\\b",
-     "reject":r"\\b(animation|cgi|simulation|toy|game|car crash|bicycle)\\b",
-     "label":"MOTORCYCLE CRASH","event":r"\\b(crash|crashes|accident|collision|collide|fall|falling|fallen|slip|sliding|wreck)\\b"},
+     "must":r"\b(motorcycle|motorbike|motorbikes|motorcycles|biker|bikers)\b",
+     "reject":r"\b(animation|cgi|simulation|toy|game|car crash|bicycle)\b",
+     "label":"MOTORCYCLE CRASH","event":r"\b(crash|crashes|accident|collision|collide|fall|falling|fallen|slip|sliding|wreck)\b"},
     {"title":"RANKING WILDEST SKATEBOARD TRICKS","intro":"Ranking wildest skateboard tricks",
      "queries":["skateboard","skateboarding","skate trick"],
      "must":r"\b(skateboard|skateboarding|skate|skater|skating)\b",
