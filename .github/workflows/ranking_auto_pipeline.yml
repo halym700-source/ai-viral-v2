@@ -15,8 +15,9 @@ on:
         description: Single-topic social Shorts preview, or approved footage for publishing
         type: choice
         required: true
-        default: social_shorts_preview
+        default: pixabay_topic_preview
         options:
+          - pixabay_topic_preview
           - social_shorts_preview
           - approved_real_viral
           - open_archive_preview
@@ -85,6 +86,11 @@ jobs:
       - name: Validate and select approved authentic viral footage
         if: github.event_name == 'schedule' || inputs.source_mode == 'approved_real_viral'
         run: python ranking_renderer/approved_manifest.py
+      - name: Select coherent real footage with direct MP4 downloads
+        if: github.event_name == 'workflow_dispatch' && inputs.mode == 'preview' && inputs.source_mode == 'pixabay_topic_preview'
+        env:
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+        run: python ranking_renderer/source_pixabay_topic_preview.py
       - name: Install public Shorts preview downloader
         if: github.event_name == 'workflow_dispatch' && inputs.mode == 'preview' && inputs.source_mode == 'social_shorts_preview'
         run: python -m pip install --disable-pip-version-check yt-dlp
