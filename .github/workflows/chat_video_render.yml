@@ -36,8 +36,14 @@ jobs:
           python-version: '3.11'
       - name: Install render dependencies
         run: |
-          # Install a static FFmpeg build via PyPI; avoids stalled apt mirrors.
+          # Use a static FFmpeg for rendering, and install ffprobe for pydub media inspection.
           python -m pip install --disable-pip-version-check pillow==11.3.0 pydub==0.25.1 edge-tts==7.3.1 imageio-ffmpeg==0.6.0
+          if ! command -v ffprobe >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq ffmpeg
+          fi
+          command -v ffprobe
+          ffprobe -version | head -n 1
           mkdir -p "$RUNNER_TEMP/textvibe-bin"
           ln -sf "$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" "$RUNNER_TEMP/textvibe-bin/ffmpeg"
           echo "$RUNNER_TEMP/textvibe-bin" >> "$GITHUB_PATH"
