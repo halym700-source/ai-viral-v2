@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - '.github/workflows/free_3d_short_preview.yml'
+      - 'free_3d_shorts/asteroid.py'
 permissions:
   contents: read
 jobs:
@@ -22,7 +23,7 @@ jobs:
           blender -b -t 4 --python free_3d_shorts/asteroid.py
       - name: Encode 9:16 short
         run: |
-          ffmpeg -y -framerate 24 -i frames/frame_%04d.png -vf 'format=yuv420p' -c:v libx264 -preset veryfast -crf 24 -movflags +faststart -t 10 out/3D_Curiosity_Asteroid_Preview.mp4
+          ffmpeg -y -framerate 8 -pattern_type glob -i 'frames/frame_*.png' -vf 'fps=24,format=yuv420p' -c:v libx264 -preset veryfast -crf 24 -movflags +faststart -t 10 out/3D_Curiosity_Asteroid_Preview.mp4
           ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 out/3D_Curiosity_Asteroid_Preview.mp4
       - name: Save preview for manual review
         uses: actions/upload-artifact@v4
