@@ -1,0 +1,51 @@
+name: Import requested 5 motorcycle Shorts
+on:
+  push:
+    paths:
+      - '.github/workflows/import_motorcycle_shorts_retry.yml'
+permissions:
+  contents: read
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup open-source downloader
+        run: |
+          python -m pip install --disable-pip-version-check --upgrade 'yt-dlp[default]'
+          node -v
+          mkdir -p motor_downloads
+      - name: Fetch public source clips
+        shell: bash
+        run: |
+          set -uo pipefail
+          urls=(
+            'https://www.youtube.com/shorts/knspyQX82qs'
+            'https://www.youtube.com/shorts/2j603MDkoN4'
+            'https://www.youtube.com/shorts/cgAqd8pE60I'
+            'https://www.youtube.com/shorts/ZqifttpgGsw'
+            'https://www.youtube.com/shorts/J8EXfglrT3M'
+          )
+          for idx in 0 1 2 3 4; do
+            num=$((idx+1))
+            success=0
+            for client in 'tv,web_safari' 'android_vr' 'ios'; do
+              echo "Checking clip ${num}, playback client ${client}"
+              if yt-dlp --no-playlist --js-runtimes node --extractor-args "youtube:player_client=${client}" --socket-timeout 10 -f 'bv*[height<=720]+ba/b[height<=720]/b' --merge-output-format mp4 -o "motor_downloads/${num}.%(ext)s" "${urls[$idx]}"; then
+                success=1
+                break
+              fi
+            done
+            if [ "$success" != 1 ]; then
+              echo "SOURCE_UNAVAILABLE_$num"
+            fi
+          done
+          ls -lh motor_downloads/
+      - name: Export any successfully downloaded MP4 files
+        uses: actions/upload-artifact@v4
+        with:
+          name: Motorcycle-Source-Videos
+          path: motor_downloads/*
+          if-no-files-found: warn
+          retention-days: 3
