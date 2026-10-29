@@ -5,9 +5,9 @@ from mathutils import Vector
 random.seed(473)
 bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
 scene=bpy.context.scene
-scene.render.engine='CYCLES' if os.environ.get('USE_CYCLES')=='1' else 'BLENDER_EEVEE_NEXT'
+scene.render.engine='CYCLES' if os.environ.get('USE_CYCLES')=='1' else 'BLENDER_EEVEE'
 scene.render.resolution_x=540;scene.render.resolution_y=960;scene.render.resolution_percentage=100
-scene.render.fps=24;scene.frame_start=1;scene.frame_end=240
+scene.render.fps=24;scene.frame_start=1;scene.frame_end=240;scene.frame_step=3
 scene.render.image_settings.file_format='PNG'
 scene.render.filepath='frames/frame_'
 scene.world.color=(0.006,0.009,0.026)
