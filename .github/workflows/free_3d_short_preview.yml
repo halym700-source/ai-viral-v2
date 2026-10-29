@@ -1,0 +1,33 @@
+name: Free 3D Curiosity Shorts Prototype
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/free_3d_short_preview.yml'
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install free Blender and video encoder
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq blender ffmpeg
+      - name: Render fully original 3D animation
+        run: |
+          mkdir -p frames out
+          blender -b -t 4 --python free_3d_shorts/asteroid.py
+      - name: Encode 9:16 short
+        run: |
+          ffmpeg -y -framerate 24 -i frames/frame_%04d.png -vf 'format=yuv420p' -c:v libx264 -preset veryfast -crf 24 -movflags +faststart -t 10 out/3D_Curiosity_Asteroid_Preview.mp4
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 out/3D_Curiosity_Asteroid_Preview.mp4
+      - name: Save preview for manual review
+        uses: actions/upload-artifact@v4
+        with:
+          name: Free-3D-Curiosity-Preview
+          path: out/3D_Curiosity_Asteroid_Preview.mp4
+          if-no-files-found: error
+          retention-days: 3
