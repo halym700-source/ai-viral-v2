@@ -1,0 +1,65 @@
+name: Motorcycle 1-to-5 Cylinders HPC
+on:
+  push:
+    paths:
+      - '.github/workflows/hpc_motorcycle_1to5.yml'
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install video tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+          python -m pip install yt-dlp pillow
+      - name: Download and render ranking video
+        run: |
+          mkdir -p raw work out
+          cat > /tmp/render.py <<'PY'
+          import os,glob,subprocess
+          from PIL import Image,ImageDraw,ImageFont
+          urls=[
+          'https://www.youtube.com/shorts/knspyQX82qs',
+          'https://www.youtube.com/shorts/2j603MDkoN4',
+          'https://www.youtube.com/shorts/cgAqd8pE60I',
+          'https://www.youtube.com/shorts/ZqifttpgGsw',
+          'https://www.youtube.com/shorts/J8EXfglrT3M']
+          labels=['KTM DUKE 390','TRIUMPH T120','YAMAHA MT-09','YAMAHA R1','HONDA RC211V']
+          for i,url in enumerate(urls,1):
+            cmd=['yt-dlp','--no-playlist','--js-runtimes','node','-f','bv*[height<=1080]+ba/b[height<=1080]/b','--merge-output-format','mp4','-o',f'raw/clip{i}.%(ext)s',url]
+            print('Downloading',i,url,flush=True)
+            subprocess.run(cmd,check=True)
+          font='/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+          def write(d,xy,text,size,color):
+            d.text(xy,text,font=ImageFont.truetype(font,size),fill=color,stroke_width=4,stroke_fill=(0,0,0))
+          for i in range(5):
+            canvas=Image.new('RGBA',(720,1280),(0,0,0,0))
+            d=ImageDraw.Draw(canvas)
+            write(d,(35,72),'RANKING ENGINE SOUNDS',40,'white')
+            write(d,(35,130),'1 TO 5 CYLINDERS',43,'#00A8FF')
+            write(d,(35,200),'WAIT FOR #5!',33,'#FFED26')
+            write(d,(35,786),f'{i+1} CYLINDER'+('S' if i else ''),53,'#FFED26' if i==4 else '#00A8FF')
+            for j,label in enumerate(labels):
+              write(d,(35,888+j*59),f'{j+1}. {label}',26,'#FFED26' if i==j else 'white')
+            canvas.save(f'work/card{i+1}.png')
+            files=glob.glob(f'raw/clip{i+1}.*')
+            if not files: raise Exception('Source video missing')
+            duration=5.5 if i==4 else 3.7
+            filtergraph='[0:v]scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,fps=30[v];[v][1:v]overlay=0:0:shortest=1,format=yuv420p[out]'
+            subprocess.run(['ffmpeg','-y','-loglevel','error','-ss','0.3','-i',files[0],'-loop','1','-i',f'work/card{i+1}.png','-t',str(duration),'-filter_complex',filtergraph,'-map','[out]','-map','0:a:0?','-c:v','libx264','-preset','fast','-crf','23','-r','30','-c:a','aac','-ar','44100','-ac','2','-b:a','160k','-movflags','+faststart',f'out/clip{i+1}.mp4'],check=True)
+          with open('out/list.txt','w') as f:
+            for i in range(1,6): f.write("file 'clip%d.mp4'\n"%i)
+          subprocess.run(['ffmpeg','-y','-loglevel','error','-f','concat','-safe','0','-i','out/list.txt','-c','copy','-movflags','+faststart','out/Motorcycle_1_to_5_Cylinder_HPC.mp4'],check=True)
+          PY
+          python /tmp/render.py
+      - name: Upload MP4 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Motorcycle-1-to-5-Cylinder-HPC-MP4
+          path: out/Motorcycle_1_to_5_Cylinder_HPC.mp4
+          if-no-files-found: error
+          retention-days: 3
