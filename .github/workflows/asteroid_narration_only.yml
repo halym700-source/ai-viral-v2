@@ -1,0 +1,40 @@
+name: English Narration for 3D Short
+on:
+  push:
+    paths:
+      - '.github/workflows/asteroid_narration_only.yml'
+permissions:
+  contents: read
+jobs:
+  synthesize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate six natural English voice segments
+        run: |
+          python -m pip install -q edge-tts
+          mkdir -p narration
+          python - <<'PY'
+          import asyncio,edge_tts
+          sentences = [
+          "What if a one kilometer asteroid hit Earth?",
+          "At impact, it could unleash energy greater than thousands of nuclear bombs.",
+          "A violent shockwave would devastate the surrounding region.",
+          "Dust and molten rock could surge high into the atmosphere.",
+          "Some of that debris could block sunlight, disrupting the climate.",
+          "The real danger might continue long after the blast."
+          ]
+          async def main():
+              for i,text in enumerate(sentences):
+                  await edge_tts.Communicate(text,voice="en-US-AndrewMultilingualNeural",rate="-8%").save(f"narration/voice_{i}.mp3")
+                  print("OK",i)
+          asyncio.run(main())
+          PY
+      - name: Upload narration segments
+        uses: actions/upload-artifact@v4
+        with:
+          name: asteroid-narration-neural
+          path: narration/*.mp3
+          if-no-files-found: error
+          retention-days: 1
