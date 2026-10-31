@@ -1,0 +1,50 @@
+name: ReshRanks Video Downloader + 24s Renderer
+run-name: ReshRanks ${{ inputs.job_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: Unique ID for one Ranking video
+        required: true
+        type: string
+      sources_json:
+        description: Five licensed sources in ranking order 5 through 1 as JSON
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reshranks-${{ inputs.job_id }}
+  cancel-in-progress: false
+
+jobs:
+  video:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install FFmpeg, yt-dlp, Pillow
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+          python -m pip install --disable-pip-version-check --upgrade 'yt-dlp[default]' 'Pillow>=10,<12'
+      - name: Download licensed clips and render Ranking Shorts
+        env:
+          RESH_SOURCES_JSON: ${{ inputs.sources_json }}
+          RESH_WORK: out
+        run: python reshranks_renderer/render.py
+      - name: Upload finished MP4 and license manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: reshranks-${{ inputs.job_id }}
+          path: |
+            out/short.mp4
+            out/manifest.json
+          if-no-files-found: error
+          retention-days: 3
