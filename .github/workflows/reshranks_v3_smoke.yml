@@ -39,21 +39,26 @@ jobs:
               print('TEST_RESULT: NO_CC_BY_CANDIDATES')
               sys.exit(4)
           out=Path(os.environ['RESH_WORK']);out.mkdir(parents=True,exist_ok=True)
-          for idx,v in enumerate(candidates[:3]):
-              dest=out/f'smoke_{idx}.%(ext)s'
+
+          clients=['tv,web_safari','android','ios','web_embedded']
+          for ci, client in enumerate(clients):
+              source=candidates[ci % min(len(candidates),3)]
+              dest=out/f'client_{ci}.%(ext)s'
               args=['yt-dlp','--no-playlist','--no-progress','--no-warnings',
-                    '--socket-timeout','12','--retries','0','--fragment-retries','0',
-                    '--max-filesize','35M','-f','b[height<=480]/b','-o',str(dest),v['url']]
-              print('DOWNLOAD_ATTEMPT:',idx+1,v['video_id'],flush=True)
-              try: p=subprocess.run(args,capture_output=True,text=True,timeout=65)
+                    '--socket-timeout','10','--retries','0','--fragment-retries','0',
+                    '--extractor-args',f'youtube:player_client={client}',
+                    '--max-filesize','35M','-f','b[height<=480]/b',
+                    '-o',str(dest),source['url']]
+              print('CLIENT_DOWNLOAD_ATTEMPT:',ci+1,client,source['video_id'],flush=True)
+              try: p=subprocess.run(args,capture_output=True,text=True,timeout=50)
               except subprocess.TimeoutExpired:
-                  print('DOWNLOAD_FAILED: timeout',flush=True);continue
-              files=list(out.glob(f'smoke_{idx}.*'))
+                  print('CLIENT_DOWNLOAD_FAILED: timeout',flush=True);continue
+              files=list(out.glob(f'client_{ci}.*'))
               if p.returncode==0 and len(files)==1 and files[0].stat().st_size>100000:
                   print('TEST_RESULT: CC_BY_SEARCH_AND_DOWNLOAD_OK',flush=True)
                   print('DOWNLOADED_BYTES:',files[0].stat().st_size,flush=True)
                   sys.exit(0)
-              print('DOWNLOAD_FAILED: exit',p.returncode,'details',p.stderr[-280:].replace(chr(10),' '),flush=True)
-          print('TEST_RESULT: YOUTUBE_DOWNLOAD_FAILED',flush=True)
+              print('CLIENT_DOWNLOAD_FAILED: exit',p.returncode,'details',p.stderr[-350:].replace(chr(10),' '),flush=True)
+          print('TEST_RESULT: YOUTUBE_DOWNLOAD_FAILED_ALL_CLIENTS')
           sys.exit(5)
           PY
