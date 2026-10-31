@@ -37,7 +37,7 @@ import render
 # Reference layout: black bars, a cream conversation card, fixed main avatar
 # and distinctly illustrated contact roles. No network or speech API needed.
 assert render.PEER == "father"
-from pastel_layout import portrait
+from reference_layout import portrait
 CREAM = (248, 244, 234)
 assert portrait("me").tobytes() == portrait("me").tobytes()
 assert portrait("father").tobytes() != portrait("mother").tobytes()
