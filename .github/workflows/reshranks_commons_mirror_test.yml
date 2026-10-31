@@ -1,0 +1,34 @@
+name: ReshRanks Verified YouTube CC Mirror Auto Download
+on:
+  push:
+    paths:
+      - '.github/workflows/reshranks_commons_mirror_test.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ffprobe
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Find by YouTube video ID, verify license, download original AV
+        run: |
+          python - <<'PY'
+          from reshranks_autopilot.commons_mirror import download_youtube_cc_archive
+          result=download_youtube_cc_archive('R-YJw6-Sshk','/tmp/reshranks_by_video_id')
+          if not result:
+              raise RuntimeError('TEST_RESULT: ARCHIVE_NOT_FOUND_OR_LICENSE_NOT_VERIFIED')
+          file,meta=result
+          print('TEST_RESULT: AUTO_FOUND_AND_DOWNLOADED_ORIGINAL_YOUTUBE_CC_VIDEO',flush=True)
+          print('MEDIA_PATH:',file,'BYTES:',file.stat().st_size,'LICENSE:',meta['license'],flush=True)
+          print('ARCHIVE:',meta['archive_url'],flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-youtube-cc-mirror-sample
+          path: /tmp/reshranks_by_video_id.*
+          if-no-files-found: error
+          retention-days: 1
