@@ -96,7 +96,7 @@ def find_candidates(theme, excluded):
     for term in theme['queries']:
         result = api('search', {'part':'snippet', 'type':'video', 'q':term,
                    'videoLicense':'creativeCommon', 'videoDuration':'short',
-                   'maxResults':50, 'order':'viewCount', 'safeSearch':'strict'})
+                   'maxResults':50, 'order':('date' if theme['queries'].index(term) == 1 else 'viewCount'), 'safeSearch':'strict'})
         for item in result.get('items', []):
             vid = item.get('id', {}).get('videoId')
             if vid and vid not in excluded:
@@ -130,7 +130,9 @@ def find_candidates(theme, excluded):
             continue
         views = int((video.get('statistics') or {}).get('viewCount','0'))
         # Consider engagement and ranking, but favor diverse and correctly labeled scenes.
-        score = math.log1p(views) + (0.75 if 'sound' in low else 0) + (0.65 if 'exhaust' in low else 0)
+        age=max(1,(dt.datetime.now(dt.timezone.utc)-dt.datetime.fromisoformat(snippet.get('publishedAt','2000-01-01T00:00:00Z').replace('Z','+00:00'))).days)
+        views_per_day=views/age
+        score = math.log1p(views) + 0.35*math.log1p(views_per_day) + (0.75 if 'sound' in low else 0) + (0.65 if 'exhaust' in low else 0)
         scored.append({'video_id':vid,'url':'https://www.youtube.com/watch?v='+vid,
             'title':title, 'channel':snippet['channelTitle'], 'channel_id':snippet.get('channelId',''),
             'published_at':snippet.get('publishedAt',''), 'duration':duration,
@@ -218,8 +220,9 @@ def choose_theme():
         if not m: raise ValueError('Unknown theme: '+override)
         return [m]
     # Rotate topics across runs; try backup themes if CC materials are unavailable.
-    day=dt.datetime.now(dt.timezone.utc).timetuple().tm_yday
-    start=day%len(THEMES)
+    now=dt.datetime.now(dt.timezone.utc)
+    day=now.timetuple().tm_yday
+    start=(day*2+(1 if now.hour>=12 else 0))%len(THEMES)
     return THEMES[start:]+THEMES[:start]
 
 
