@@ -12,7 +12,7 @@
 6. FFmpeg ile **22.8 saniyelik** HPC (**Hook–Progression–Climax**) Shorts üretir: 1.6 sn merak uyandıran hook, 3.5 sn × 4 sıralama ve 7.2 sn final.
 7. **1080×1920, 30 fps**, gerçek kaynak sesleri, ses yüksekliği dengeleme, #5–#1 numaraları, konu başlığı, @reshranks filigranı ve final ses patlaması için özel kurgu içerir.
 8. MP4 ve içerik atıf manifestini GitHub Artifacts'a kaydeder. n8n çıktıyı indirir, süreyi / boyutu / kaynak sayısını kontrol eder.
-9. n8n YouTube OAuth ile **PUBLIC** olarak yükler ve gerçek YouTube bağlantısını kayıt eder.
+9. n8n YouTube OAuth ile **ilk testte PRIVATE** olarak yükler ve gerçek YouTube bağlantısını kayıt eder.
 10. Son 30 günlük GitHub kaynak manifestleriyle mümkün olduğunca aynı videoları tekrar seçmez.
 
 ## Bir kez yapılması gereken zorunlu kurulum (iPhone)
@@ -21,8 +21,8 @@
 2. **GitHub Actions** bölümünde `ReshRanks HPC Autopilot` iş akışının yer aldığını doğrulayın.
 3. iPhone'da `https://halym700.app.n8n.cloud` adresinde **Workflows → Import from File** kullanarak `workflows/RESH_RANKS_V3_FULL_AUTOPILOT_N8N.json` dosyasını içe aktarın.
 4. n8n içindeki **03, 05, 10 ve 13** numaralı GitHub HTTP Request düğümlerinin `Header Auth` kimlik bilgilerini seçin. Mevcut başka otomasyondaki GitHub credential uygun izne sahipse tekrar kullanılabilir. Token'ı düğümün koduna yazmayın.
-5. **17 YouTube OAuth - publish PUBLIC** düğümüne mutlaka **ReshRanks** YouTube kanalının hesabını bağlayın. Önceden kullanılan `YouTube Account 3` başka kanala aitse **kullanmayın**. Yanlış kanalın yetkilendirilmesi yanlış kanala yayın yapılmasına neden olur.
-6. İlk testte yayın gizliliğini `private` yapın. Bir video doğru kanala, doğru başlık ve kaynak atfıyla yüklenirse `public` ayarına geri alın.
+5. **17 YouTube OAuth - PRIVATE TEST ONLY** düğümüne mutlaka **ReshRanks** YouTube kanalının hesabını bağlayın. Önceden kullanılan `YouTube Account 3` başka kanala aitse **kullanmayın**. Yanlış kanalın yetkilendirilmesi yanlış kanala yayın yapılmasına neden olur.
+6. İlk testte yayın gizliliği zaten `private` olarak ayarlanmıştır. Video doğru kanala, doğru başlık ve kaynak atfıyla yüklendikten sonra `public` ayarına alın.
 7. Akışı **Execute Workflow** ile test edin. Hata varsa GitHub Actions loglarını kontrol edin. Başarılı uçtan uca testten sonra workflow'u **Active** yapın.
 8. n8n zaman dilimini `Europe/Istanbul` olarak kontrol edin. **Günde iki video**; kaynak bulamazsa yayın yok.
 
