@@ -38,7 +38,7 @@ jobs:
           python -m pip install --disable-pip-version-check --upgrade 'yt-dlp[default]' 'Pillow>=10,<12'
       - name: Discover 5 usable CC-BY YouTube sources under one topic
         env:
-          YOUTUBE_DATA_API_KEY: ${{ secrets.YOUTUBE_DATA_API_KEY }}
+          YOUTUBE_DATA_API_KEY: ${{ secrets.YOUTUBE_DATA_API_KEY || secrets.YOUTUBE_RESEARCH_API_KEY }}
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           RESH_THEME: ${{ inputs.theme }}
