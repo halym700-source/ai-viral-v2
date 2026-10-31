@@ -1,5 +1,5 @@
 {
-  "name": "RESH RANKS V3 - AUTO FIND 5 YOUTUBE CC CLIPS - HPC EDIT - PUBLIC PUBLISH",
+  "name": "RESH RANKS V3 - AUTOMATIC DISCOVERY + HPC - PRIVATE TEST UNTIL VERIFIED",
   "nodes": [
     {
       "id": "rr-auto-1",
@@ -374,7 +374,7 @@
     },
     {
       "id": "rr-auto-18",
-      "name": "17 YouTube OAuth - publish PUBLIC",
+      "name": "17 YouTube OAuth - PRIVATE TEST ONLY",
       "type": "n8n-nodes-base.youTube",
       "typeVersion": 1,
       "position": [
@@ -390,7 +390,7 @@
         "binaryProperty": "data",
         "options": {
           "description": "={{ $json.description }}",
-          "privacyStatus": "public",
+          "privacyStatus": "private",
           "notifySubscribers": false,
           "selfDeclaredMadeForKids": false
         }
@@ -547,18 +547,7 @@
       "main": [
         [
           {
-            "node": "17 YouTube OAuth - publish PUBLIC",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "17 YouTube OAuth - publish PUBLIC": {
-      "main": [
-        [
-          {
-            "node": "18 Record published video",
+            "node": "17 YouTube OAuth - PRIVATE TEST ONLY",
             "type": "main",
             "index": 0
           }
@@ -613,6 +602,17 @@
         [
           {
             "node": "08 Retry while GitHub is working",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17 YouTube OAuth - PRIVATE TEST ONLY": {
+      "main": [
+        [
+          {
+            "node": "18 Record published video",
             "type": "main",
             "index": 0
           }
