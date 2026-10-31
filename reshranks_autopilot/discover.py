@@ -172,7 +172,7 @@ def audio_analysis(path, seconds=55):
 
 
 def download_videos(candidates, work, wanted=5):
-    selected=[]; used_channels=set()
+    selected=[]; used_channels=set(); archive_lookups=0
     for i,c in enumerate(candidates[:40]):
         if c['channel_id'] and c['channel_id'] in used_channels:
             continue
@@ -188,11 +188,14 @@ def download_videos(candidates, work, wanted=5):
         except (subprocess.CalledProcessError,subprocess.TimeoutExpired):
             print('Direct YouTube download blocked:',c['video_id'],flush=True)
             matches=[]
-        if len(matches)!=1:
+        if len(matches)!=1 and archive_lookups<8:
+            archive_lookups += 1
             # Only accept a Commons mirror of this exact YouTube ID with CC-BY
             # metadata. Do not accept unrelated substitutes or silent stock.
             try:
+                import time
                 from commons_mirror import download_youtube_cc_archive
+                time.sleep(0.8)  # Avoid excessive requests to Wikimedia Commons
                 archived=download_youtube_cc_archive(c['video_id'],work/f'candidate_{i}_cc_mirror')
                 matches=[archived[0]] if archived else []
             except Exception as err:
