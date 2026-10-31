@@ -153,7 +153,7 @@ def render_frame(t,starts,lines,contact_name,peer,duration,width=720,height=1280
         offset=scroll+(future-scroll)*(1-(1-elapsed)**3)
         ypos=first+7-round(offset)
         for i,m,rows,ht in visible:
-            if ypos<first+8 or ypos+ht>last+85 or ypos>last:
+            if ypos+ht<first or ypos>last:
                 ypos+=ht+12;continue
             own=m['speaker']=='me'
             max_row=max(ld.textbbox((0,0),row,font=bubble_font)[2] for row in rows)
