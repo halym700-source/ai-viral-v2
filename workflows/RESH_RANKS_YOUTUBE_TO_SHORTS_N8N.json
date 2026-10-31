@@ -1,0 +1,486 @@
+{
+  "name": "RESH RANKS | YouTube URLs -> Download -> 24s Edit -> Dropbox (SETUP REQUIRED)",
+  "nodes": [
+    {
+      "id": "rr-manual",
+      "name": "Start manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "rr-1",
+      "name": "01 SOURCE LINKS - ENTER FIVE",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Replace these URLs with links to videos you can legally reuse.\nconst sources=[\n{rank:5,name:'Honda CBR600RR',subtitle:'4 cylinders',url:'',rights:'PENDING',rights_evidence:'',start:0},\n{rank:4,name:'Triumph Street Triple 765 RS',subtitle:'3 cylinders',url:'',rights:'PENDING',rights_evidence:'',start:0},\n{rank:3,name:'Yamaha MT-09',subtitle:'3 cylinders',url:'',rights:'PENDING',rights_evidence:'',start:0},\n{rank:2,name:'Ducati Panigale V4',subtitle:'4 cylinders',url:'',rights:'PENDING',rights_evidence:'',start:0},\n{rank:1,name:'Kawasaki Ninja H2R',subtitle:'4 cylinders',url:'',rights:'PENDING',rights_evidence:'',start:0,hook_start:0}\n];\nreturn [{json:{job_id:'reshranks-'+Date.now().toString(36)+'-'+String($execution.id||'manual'),sources,title:'Ranking CRAZIEST Motorcycle Engine Sounds 🔥 #shorts',description:'Five incredible motorcycle rev sounds ranked! Which one wins? #shorts #motorcycle #enginesounds #reshranks'}}];"
+      }
+    },
+    {
+      "id": "rr-2",
+      "name": "02 VERIFY REUSE RIGHTS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        430,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const j=$input.first().json;\nif(!Array.isArray(j.sources)||j.sources.length!==5)throw new Error('Exactly five sources required');\nconst allowed=new Set(['owned','permission','cc_by_verified']);\nfor(const s of j.sources){\n if(!s.url||!/^https:\\/\\//i.test(s.url))throw new Error('Source #'+s.rank+' URL not set');\n if(!allowed.has(s.rights)||!s.rights_evidence)throw new Error('Rights missing for #'+s.rank+'. Add verified reuse status and evidence');\n}\nreturn [{json:j}];"
+      }
+    },
+    {
+      "id": "rr-3",
+      "name": "03 GitHub RANKING render dispatch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/repos/halym700-source/ai-viral-v2/actions/workflows/reshranks_render.yml/dispatches",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ref:'main',inputs:{job_id:$json.job_id,sources_json:JSON.stringify({sources:$json.sources})}}) }}",
+        "options": {
+          "timeout": 60000
+        }
+      }
+    },
+    {
+      "id": "rr-4",
+      "name": "04 Wait 30 seconds",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        890,
+        300
+      ],
+      "parameters": {
+        "amount": 30
+      },
+      "webhookId": "resh-ranks-wait-30-sec"
+    },
+    {
+      "id": "rr-5",
+      "name": "05 Check GitHub artifacts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        300
+      ],
+      "parameters": {
+        "url": "https://api.github.com/repos/halym700-source/ai-viral-v2/actions/artifacts?per_page=100",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      }
+    },
+    {
+      "id": "rr-6",
+      "name": "06 Find finished MP4 artifact",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1350,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const cfg=$('02 VERIFY REUSE RIGHTS').first().json;const a=$input.first().json.artifacts||[];const match=a.find(x=>x.name==='reshranks-'+cfg.job_id&&!x.expired);return [{json:{ready:!!match,artifact_id:match?.id||0,job_id:cfg.job_id}}];"
+      }
+    },
+    {
+      "id": "rr-7",
+      "name": "07 Is ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1580,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "ready",
+              "leftValue": "={{ $json.ready === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "rr-8",
+      "name": "08 Timeout?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1810,
+        510
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "retries",
+              "leftValue": "={{ $runIndex < 24 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "rr-9",
+      "name": "09 Stop - download failed or timed out",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        2050,
+        690
+      ],
+      "parameters": {
+        "errorMessage": "ReshRanks renderer timeout. Inspect GitHub Actions run. No video was published."
+      }
+    },
+    {
+      "id": "rr-10",
+      "name": "10 Download ZIP from GitHub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1810,
+        300
+      ],
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/halym700-source/ai-viral-v2/actions/artifacts/'+$json.artifact_id+'/zip' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 180000,
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "rr-11",
+      "name": "11 Prepare ZIP file",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2050,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const it=$input.first();if(!it.binary?.data)throw new Error('GitHub ZIP missing');it.binary.data.fileName='reshranks.zip';it.binary.data.fileExtension='zip';it.binary.data.mimeType='application/zip';return [it];"
+      }
+    },
+    {
+      "id": "rr-12",
+      "name": "12 Extract MP4",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        2280,
+        300
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      }
+    },
+    {
+      "id": "rr-13",
+      "name": "13 Prepare MP4 for Dropbox",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2510,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const it=$input.first();const mp4=Object.values(it.binary||{}).find(f=>String(f.fileName||'').endsWith('.mp4'));if(!mp4)throw new Error('MP4 not found inside artifact ZIP');const cfg=$('02 VERIFY REUSE RIGHTS').first().json;mp4.fileName='RESH_RANKS_'+cfg.job_id+'.mp4';mp4.fileExtension='mp4';mp4.mimeType='video/mp4';return [{json:{file_name:mp4.fileName,title:cfg.title,description:cfg.description,job_id:cfg.job_id},binary:{data:mp4}}];"
+      }
+    },
+    {
+      "id": "rr-14",
+      "name": "14 Dropbox upload MP4 - SELECT CREDENTIAL",
+      "type": "n8n-nodes-base.dropbox",
+      "typeVersion": 1,
+      "position": [
+        2740,
+        300
+      ],
+      "parameters": {
+        "resource": "file",
+        "operation": "upload",
+        "path": "={{ '/'+$json.file_name }}",
+        "binaryData": true,
+        "binaryPropertyName": "data"
+      }
+    },
+    {
+      "id": "rr-15",
+      "name": "15 Completed (no YouTube auto-publish)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2970,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const cfg=$('13 Prepare MP4 for Dropbox').first().json;return [{json:{status:'uploaded_to_dropbox_not_youtube',job_id:cfg.job_id,file_name:cfg.file_name,title:cfg.title,description:cfg.description}}];"
+      }
+    }
+  ],
+  "connections": {
+    "Start manually": {
+      "main": [
+        [
+          {
+            "node": "01 SOURCE LINKS - ENTER FIVE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01 SOURCE LINKS - ENTER FIVE": {
+      "main": [
+        [
+          {
+            "node": "02 VERIFY REUSE RIGHTS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 VERIFY REUSE RIGHTS": {
+      "main": [
+        [
+          {
+            "node": "03 GitHub RANKING render dispatch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 GitHub RANKING render dispatch": {
+      "main": [
+        [
+          {
+            "node": "04 Wait 30 seconds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 Wait 30 seconds": {
+      "main": [
+        [
+          {
+            "node": "05 Check GitHub artifacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 Check GitHub artifacts": {
+      "main": [
+        [
+          {
+            "node": "06 Find finished MP4 artifact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 Find finished MP4 artifact": {
+      "main": [
+        [
+          {
+            "node": "07 Is ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 Is ready?": {
+      "main": [
+        [
+          {
+            "node": "10 Download ZIP from GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "08 Timeout?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 Timeout?": {
+      "main": [
+        [
+          {
+            "node": "04 Wait 30 seconds",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "09 Stop - download failed or timed out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 Download ZIP from GitHub": {
+      "main": [
+        [
+          {
+            "node": "11 Prepare ZIP file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11 Prepare ZIP file": {
+      "main": [
+        [
+          {
+            "node": "12 Extract MP4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12 Extract MP4": {
+      "main": [
+        [
+          {
+            "node": "13 Prepare MP4 for Dropbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13 Prepare MP4 for Dropbox": {
+      "main": [
+        [
+          {
+            "node": "14 Dropbox upload MP4 - SELECT CREDENTIAL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14 Dropbox upload MP4 - SELECT CREDENTIAL": {
+      "main": [
+        [
+          {
+            "node": "15 Completed (no YouTube auto-publish)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "pinData": {},
+  "tags": []
+}
