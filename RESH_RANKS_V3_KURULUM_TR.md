@@ -64,3 +64,5 @@
 - CC BY arsiv kaynagi kullanilirsa olusan YouTube aciklamasina arsi̇v ve lisans URL'leri dahil edilir.
 - Baska bir testte Pixabay'dan dogrudan MP4 indirildi (1,847,363 bayt), **ama video ses kanali icermiyordu**; motor sesleri rankinginde bu kaynak uygun kabul edilmez. Test: https://github.com/halym700-source/ai-viral-v2/actions/runs/41162413001
 - Tum denemeler YouTube'a video yuklemeden yapildi. n8n OAuth baglantisi ve 5 kullanilabilir eslesmenin canli testi tamamlanmadigi icin tum surecin otomatik yayina hazir oldugu iddia edilmez.
+
+- Ayni tema icin bulunan ilk 20 CC etiketli YouTube adayindan **0 tanesinde** gerekli tam-kimlik Commons arsiv eslesmesi bulunabildi (test: https://github.com/halym700-source/ai-viral-v2/actions/runs/41162947505). Son kisimda Commons API gecici erisim hatalari goruldu. Bu nedenle 5 video bulma/yayinlama **garanti degildir** ve otomatik yayin acilmamalidir. Wikimedia isteklerini sinirlamak icin en fazla 8 Commons arama denemesi ve kisa bekleme eklendi.
