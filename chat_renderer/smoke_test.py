@@ -42,6 +42,11 @@ CREAM = (248, 244, 234)
 assert portrait("me").tobytes() == portrait("me").tobytes()
 assert portrait("father").tobytes() != portrait("mother").tobytes()
 assert portrait("sister").tobytes() != portrait("grandpa").tobytes()
+assert portrait("father").tobytes() != portrait("me").tobytes(), "Dad must not be the narrator"
+assert portrait("mother").tobytes() != portrait("girlfriend").tobytes(), "Mom must not be girlfriend"
+assert portrait("older_brother").tobytes() != portrait("brother").tobytes(), "Older and younger brothers must differ"
+assert portrait("maternal_grandma").tobytes() != portrait("mother").tobytes(), "Grandma should look older"
+assert portrait("me").tobytes() == portrait("me").tobytes(), "Narrator should be stable"
 render.VIDEO_DURATION = 12
 preview = render.draw_frame(0, [])
 assert preview.size == (720, 1280)
