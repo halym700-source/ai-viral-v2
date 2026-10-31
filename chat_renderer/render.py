@@ -308,6 +308,19 @@ async def generate_voice(index, msg):
         except Exception as exc:
             last_exc = exc
             await asyncio.sleep((attempt + 1) * 3)
+    # Only in explicit private-preview mode: a local speech fallback prevents
+    # temporary Edge TTS outages from blocking the sample MP4. Never used in
+    # normal channel automation or public releases.
+    if os.environ.get("CHAT_PREVIEW_FALLBACK_TTS") == "1":
+        print(f"Preview voice fallback at line {index}: {last_exc}")
+        wav_path = TMP / f"{index:03d}-backup.wav"
+        female = msg["speaker"] in ("girlfriend", "mother", "grandma", "maternal_grandma",
+                                    "paternal_grandma", "daughter", "aunt", "sister")
+        voice = "en-us+f3" if female else "en-us+m3"
+        subprocess.run(["espeak", "-v", voice, "-s", "163", "-w", str(wav_path),
+                        "--stdin"], input=msg["text"], text=True, check=True,
+                       stdout=subprocess.DEVNULL)
+        return wav_path
     raise RuntimeError(f"TTS failed at line {index}: {last_exc}")
 
 async def synthesize():
