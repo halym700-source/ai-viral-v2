@@ -1,4 +1,5 @@
 name: TextVibe Private Preview (No YouTube)
+# Reference avatar preview; never includes YouTube upload.
 on:
   push:
     paths:
