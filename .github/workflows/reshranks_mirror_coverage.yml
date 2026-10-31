@@ -1,0 +1,34 @@
+name: ReshRanks Mirror Coverage for Automatic Five Sources
+on:
+  push:
+    paths:
+      - '.github/workflows/reshranks_mirror_coverage.yml'
+permissions:
+  contents: read
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      YOUTUBE_DATA_API_KEY: ${{ secrets.YOUTUBE_DATA_API_KEY || secrets.YOUTUBE_RESEARCH_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check top 20 CC YouTube motorcycle ranking candidates for mirrored sources
+        run: |
+          python - <<'PY'
+          from reshranks_autopilot.discover import THEMES,find_candidates
+          from reshranks_autopilot.commons_mirror import find_youtube_archive
+          candidates=find_candidates(THEMES[0],set())
+          print('YOUTUBE_CC_CANDIDATES:',len(candidates),flush=True)
+          found=[]
+          for index,source in enumerate(candidates[:20]):
+              try: mirror=find_youtube_archive(source['video_id'])
+              except Exception as exc:
+                  print('MIRROR_SEARCH_FAILED:',source['video_id'],type(exc).__name__,flush=True)
+                  continue
+              if mirror:
+                  found.append(source['video_id'])
+                  print('EXACT_LICENSED_MIRROR:',source['video_id'],mirror['archive_url'],flush=True)
+          print('ARCHIVE_MIRRORS_AVAILABLE:',len(found),'OUT_OF',min(len(candidates),20),flush=True)
+          print('FIVE_SOURCE_ARCHIVE_VIABILITY:',len(found)>=5,flush=True)
+          PY
