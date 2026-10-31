@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - 'chat_renderer/render.py'
+      - 'chat_renderer/pastel_layout.py'
+      - 'chat_renderer/reference_assets.json'
       - 'chat_renderer/smoke_test.py'
       - '.github/workflows/chat_renderer_smoke.yml'
   workflow_dispatch:
