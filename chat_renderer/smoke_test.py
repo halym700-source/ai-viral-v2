@@ -11,6 +11,8 @@ from pathlib import Path
 from pydub import AudioSegment
 
 os.environ["CHAT_TEST_MODE"] = "1"
+os.environ["CHAT_WALLPAPER_TEST_MODE"] = "1"
+os.environ["CHAT_JOB_ID"] = "smoke-preview-1"
 os.environ["CHAT_RENDER_FPS"] = "4"
 os.environ["CHAT_LANG"] = "en"
 os.environ["CHAT_TTS_PROVIDER"] = "edge"
@@ -52,10 +54,15 @@ preview = render.draw_frame(0, [])
 assert preview.size == (720, 1280)
 assert preview.getpixel((5, 5)) == (0, 0, 0), "Top black safe space missing"
 assert preview.getpixel((30, 180)) == CREAM, "Cream card missing"
-assert preview.getpixel((110, 1015)) != CREAM, "Bottom-left narrator is missing"
+# The main character is visibly present at bottom right, not bottom left.
+from photo_wallpapers import build_photo_wallpaper
+photo1,_=build_photo_wallpaper('smoke-preview-1')
+photo2,_=build_photo_wallpaper('smoke-preview-2')
+assert photo1.tobytes()!=photo2.tobytes(), "Each new job should get a new photo treatment"
+assert preview.getpixel((585, 1015)) != preview.getpixel((115, 1015)), "Narrator is not distinct from backdrop"
 assert preview.getpixel((122, 198)) != CREAM, "Top-left contact profile photo is missing"
-assert preview.getpixel((100, 350)) == CREAM, "Oversized top-left character must be removed"
-assert preview.getpixel((585, 1015)) == CREAM, "No character should remain at bottom right"
+assert preview.getpixel((100, 350)) != CREAM, "Photographic chat background must replace plain cream"
+assert preview.getpixel((585, 1015)) != CREAM, "Bottom-right narrator is missing"
 # After a message begins, its first bubble appears on the correct side.
 frame = render.draw_frame(1.5, [1.0])
 assert frame.getpixel((500, 318)) != CREAM, "First message bubble missing"
