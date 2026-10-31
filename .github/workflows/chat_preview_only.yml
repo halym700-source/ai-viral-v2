@@ -26,9 +26,10 @@ jobs:
       - name: Verify offline TTS fallback
         run: |
           if ! command -v espeak >/dev/null 2>&1; then sudo apt-get install -y -qq espeak; fi
-      # One-off private preview: simplified header photo and only bottom-left narrator, no YouTube upload.
+      # One-off private preview: rotating wallpaper photo and original bottom-right narrator, no YouTube upload.
       - name: Generate private test video (no upload)
         env:
+          CHAT_JOB_ID: preview-${{ github.run_id }}
           CHAT_LANG: en
           CHAT_TTS_PROVIDER: edge
           CHAT_PREVIEW_FALLBACK_TTS: '1'
