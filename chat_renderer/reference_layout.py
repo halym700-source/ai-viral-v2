@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from functools import lru_cache
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageEnhance
 
 W,H = 720,1280
 BLACK=(0,0,0)
@@ -30,52 +30,72 @@ def assets():
     return {key:Image.open(io.BytesIO(base64.b64decode(value))).convert('RGBA')
             for key,value in raw.items()}
 
+# Stable 22-year-old narrator: nobody else ever reuses his portrait.
 FEMALE={'girlfriend','mother','grandma','maternal_grandma','paternal_grandma',
-        'daughter','aunt','sister'}
-ELDERLY={'grandma','grandpa','maternal_grandma','paternal_grandma'}
-MIDDLE_AGE={'mother','father','uncle','aunt'}
+        'daughter','aunt','sister','younger_sister'}
+FAMILY_ASSET_FILE=Path(__file__).resolve().parent/'family_face_sources.json'
 
-def hair_variant(image,role):
-    """Add age/style changes only to the peer; never touch the main character."""
-    if role in ('girlfriend','me'):
-        return image
-    img=image.convert('RGB')
-    data=np.asarray(img,dtype=np.float32).copy()
+@lru_cache(maxsize=1)
+def family_assets():
+    if not FAMILY_ASSET_FILE.is_file():
+        raise RuntimeError('Missing independent family portraits')
+    with FAMILY_ASSET_FILE.open(encoding='utf8') as fp:
+        raw=json.load(fp)
+    return {key:Image.open(io.BytesIO(base64.b64decode(value))).convert('RGBA')
+            for key,value in raw.items()}
+
+def recolor_hair(image,color,strength=.6):
+    data=np.asarray(image.convert('RGB'),dtype=np.float32).copy()
     h,w=data.shape[:2]
-    yy,xx=np.mgrid[:h,:w]
-    lum=data.mean(axis=2)
-    dark=np.clip((123-lum)/62,0,1)
-    top=np.clip((h*.69-yy)/(h*.27),0,1)
-    region=(xx>w*.12)&(xx<w*.95)
-    mask=(dark**1.5)*top*region
-    colors={
-        'mother':((113,82,68),.29), 'father':((133,130,126),.47),
-        'sister':((132,67,49),.54), 'brother':((85,64,48),.43),
-        'aunt':((91,57,42),.5), 'uncle':((130,112,91),.48),
-        'grandma':((180,172,164),.65), 'grandpa':((176,174,171),.65),
-        'maternal_grandma':((181,174,169),.68),
-        'paternal_grandma':((157,160,155),.68),
-        'daughter':((136,78,54),.42), 'son':((89,67,52),.4),
-        'boyfriend':((77,62,53),.38), 'friend':((119,83,64),.50),
-    }
-    color,strength=colors.get(role,((115,80,60),.5))
-    a=(mask*strength)[:,:,None]
-    data=data*(1-a)+np.array(color)[None,None,:]*a
-    img=Image.fromarray(np.uint8(np.clip(data,0,255)),'RGB').convert('RGBA')
-    if role in MIDDLE_AGE or role in ELDERLY:
-        d=ImageDraw.Draw(img,'RGBA')
-        if role in ('mother','grandma','maternal_grandma','paternal_grandma','grandpa'):
-            y=int(h*(.40 if role in FEMALE else .43))
-            x0=int(w*.20);x1=int(w*.45);x2=int(w*.50);x3=int(w*.75)
-            c=(75,62,54,165) if role!='grandpa' else (82,84,86,185)
-            d.rounded_rectangle((x0,y,x1,y+int(h*.13)),radius=5,outline=c,width=2)
-            d.rounded_rectangle((x2,y,x3,y+int(h*.13)),radius=5,outline=c,width=2)
-            d.line([(x1,y+4),(x2,y+4)],fill=c,width=2)
-        if role in ELDERLY:
-            face=(128,99,79,50)
-            d.arc((int(w*.32),int(h*.59),int(w*.42),int(h*.61)),15,155,fill=face,width=2)
-            d.arc((int(w*.57),int(h*.59),int(w*.67),int(h*.61)),15,160,fill=face,width=2)
-    return img
+    y,x=np.mgrid[:h,:w]
+    dark=np.clip((155-data.mean(2))/95,0,1)
+    top=np.clip((h*.63-y)/(h*.25),0,1)
+    sides=np.clip((x-w*.07)/(w*.10),0,1)*np.clip((w*.95-x)/(w*.09),0,1)
+    alpha=(dark**1.8*top*sides*strength)[:,:,None]
+    data=data*(1-alpha)+np.asarray(color)[None,None,:]*alpha
+    return Image.fromarray(np.uint8(data.clip(0,255))).convert('RGBA')
+
+def identity_variant(im,role):
+    if role in ('father','mother'):
+        return im
+    im=im.convert('RGBA')
+    w,h=im.size
+    if role in ('grandpa','grandma','maternal_grandma','paternal_grandma'):
+        im=recolor_hair(im,(178,175,171),.82)
+        d=ImageDraw.Draw(im,'RGBA'); y=int(h*.43); c=(65,63,59,185)
+        for x1,x2 in [(.18,.43),(.51,.76)]:
+            d.rounded_rectangle((int(w*x1),y,int(w*x2),y+int(h*.11)),
+                                radius=4,outline=c,width=2)
+        d.line([(int(w*.43),y+5),(int(w*.51),y+5)],fill=c,width=2)
+        for x in (.31,.64):
+            d.arc((int(w*(x-.07)),int(h*.59),int(w*(x+.07)),int(h*.67)),
+                  10,165,fill=(96,77,65,90),width=2)
+    elif role in ('sister','younger_sister','daughter'):
+        im=ImageOps.mirror(recolor_hair(im,(94,48,54),.52))
+        d=ImageDraw.Draw(im,'RGBA')
+        d.arc((int(w*.20),int(h*.12),int(w*.77),int(h*.48)),
+              195,327,fill=(125,61,74,235),width=4)
+    elif role in ('brother','younger_brother','son'):
+        im=ImageOps.mirror(recolor_hair(im,(52,43,38),.65))
+        d=ImageDraw.Draw(im,'RGBA')
+        d.pieslice((int(w*.11),int(h*.07),int(w*.87),int(h*.45)),
+                   185,355,fill=(45,62,81,242))
+        d.ellipse((int(w*.40),int(h*.26),int(w*.96),int(h*.35)),
+                  fill=(40,56,74,240))
+    elif role in ('older_brother','boyfriend'):
+        im=ImageOps.mirror(recolor_hair(im,(65,51,41),.62))
+        if role=='older_brother':
+            d=ImageDraw.Draw(im,'RGBA'); y=int(h*.41)
+            for x1,x2 in [(.18,.43),(.52,.77)]:
+                d.rounded_rectangle((int(w*x1),y,int(w*x2),y+int(h*.11)),
+                                    radius=4,outline=(46,48,53,205),width=2)
+            d.line([(int(w*.43),y+6),(int(w*.52),y+6)],
+                   fill=(46,48,53,205),width=2)
+    elif role in ('aunt','friend'):
+        im=ImageOps.mirror(recolor_hair(im,(90,64,49),.35))
+    elif role=='uncle':
+        im=recolor_hair(im,(117,100,88),.35)
+    return im
 
 def soft_mask(size):
     from PIL import ImageFilter
@@ -83,16 +103,27 @@ def soft_mask(size):
     mask=Image.new('L',(w,h),0)
     d=ImageDraw.Draw(mask)
     d.rounded_rectangle((7,10,w-7,h-7),radius=46,fill=255)
-    return mask.filter(ImageFilter.GaussianBlur(radius=11))
+    return mask.filter(ImageFilter.GaussianBlur(radius=10))
 
-@lru_cache(maxsize=40)
+@lru_cache(maxsize=120)
 def portrait(role,width=196,height=205):
-    base=assets()['girlfriend' if role in FEMALE else 'me']
-    if role not in ('me','girlfriend'):
-        base=hair_variant(base,role)
-        if role in ('sister','daughter','aunt','friend','brother','son'):
-            base=ImageOps.mirror(base)
-    base=ImageOps.fit(base,(width,height),centering=(.5,.45))
+    if role=='me':
+        base=assets()['me']
+    elif role=='girlfriend':
+        base=assets()['girlfriend']
+    else:
+        sources=family_assets()
+        image_key={
+            'father':'father','mother':'mother',
+            'grandpa':'father_alt','grandma':'mother_alt',
+            'maternal_grandma':'mother_alt','paternal_grandma':'mother_alt',
+            'sister':'mother_alt','younger_sister':'mother_alt','daughter':'mother_alt',
+            'brother':'father_alt','younger_brother':'father_alt','son':'father_alt',
+            'older_brother':'father','boyfriend':'father_alt',
+            'aunt':'mother','uncle':'father_alt','friend':'mother_alt'
+        }.get(role,'mother_alt')
+        base=identity_variant(sources[image_key],role)
+    base=ImageOps.fit(base,(width,height),centering=(.5,.44))
     base.putalpha(soft_mask(base.size))
     return base
 
