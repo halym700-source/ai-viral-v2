@@ -121,6 +121,11 @@ def describe(topic,sources):
                  f'{names}\n\nAudio/video attribution (Creative Commons licenses as listed by their uploaders):\n'
                  f'{credits}\n\nSubjective sound ranking edited by @reshranks.\n'
                  '#shorts #ranking #enginesounds #motorcycle #reshranks')
+    archive_credits='\n'.join(
+        f"#{s['rank']} Archived CC-BY source: {s['archive_url']} | License: {s['license_url']}"
+        for s in sources if s.get('archive_url') and s.get('license_url'))
+    if archive_credits:
+        description += '\n\nVerified CC-BY archive references:\n' + archive_credits
     return title,description
 
 
