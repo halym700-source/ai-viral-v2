@@ -19,7 +19,7 @@ jobs:
         run: python -m pip install --quiet --upgrade 'yt-dlp[default]'
       - name: CC-BY search and direct download smoke test (NO UPLOAD)
         env:
-          YOUTUBE_DATA_API_KEY: ${{ secrets.YOUTUBE_DATA_API_KEY }}
+          YOUTUBE_DATA_API_KEY: ${{ secrets.YOUTUBE_DATA_API_KEY || secrets.YOUTUBE_RESEARCH_API_KEY }}
           RESH_WORK: ${{ runner.temp }}/resh-smoke
         run: |
           python - <<'PY'
