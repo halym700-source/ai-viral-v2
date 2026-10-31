@@ -154,17 +154,27 @@ def render_frame(t,starts,lines,contact_name,peer,duration,width=720,height=1280
     d.line([(63,194),(51,207),(63,219)],fill=TEXT,width=4,joint='curve')
     bubble_font,title_font=fonts()
     title=str(contact_name)[:22]
-    tw=d.textbbox((0,0),title,font=title_font)[2]
-    d.text(((720-tw)//2,186),title,fill=TEXT,font=title_font)
+    # Contact name moves beside its small profile photo in the top bar.
+    d.text((174,185),title,fill=TEXT,font=title_font)
     d.ellipse((583,198,602,217),outline=TEXT,width=3)
     d.ellipse((588,203,598,213),fill=TEXT)
     d.arc((637,198,671,221),185,354,fill=TEXT,width=4)
     d.rounded_rectangle((639,204,669,214),radius=3,fill=TEXT)
     d.ellipse((646,207,658,218),fill=CREAM)
-    left=portrait(peer,208,208)
-    image.paste(left,(37,264),left)
+    # Only one large character remains: the original fixed 22-year-old narrator
+    # at bottom LEFT. All other people appear only as circular contact photos.
+    photo=portrait(peer,76,76)
+    circle=Image.new('L',(76,76),0)
+    ImageDraw.Draw(circle).ellipse((2,2,73,73),fill=255)
+    # Combine circular crop with existing soft portrait transparency.
+    from PIL import ImageChops
+    photo.putalpha(ImageChops.multiply(photo.getchannel('A'),circle))
+    image.paste(photo,(85,167),photo)
+    d=ImageDraw.Draw(image)
+    d.ellipse((85,167,160,242),outline=(224,218,209),width=2)
     main=portrait('me',207,222)
-    image.paste(main,(479,897),main)
+    image.paste(main,(35,897),main)
+
     layer=Image.new('RGBA',(W,H),(0,0,0,0))
     ld=ImageDraw.Draw(layer)
     entries=[]
@@ -172,7 +182,7 @@ def render_frame(t,starts,lines,contact_name,peer,duration,width=720,height=1280
         textrows=wrap(ld,m['text'],bubble_font,max_width=415)
         ht=35+35*len(textrows)
         entries.append((i,m,textrows,ht))
-    first,last=467,902
+    first,last=279,902
     indices=[i for i,s in enumerate(starts) if s<=t]
     if indices:
         visible=entries[:indices[-1]+1]
@@ -199,6 +209,6 @@ def render_frame(t,starts,lines,contact_name,peer,duration,width=720,height=1280
             for ri,row in enumerate(rows):
                 ld.text((left_x+22,ypos+16+ri*35),row,font=bubble_font,fill=TEXT)
             ypos+=ht+12
-    viewport=layer.crop((30,467,691,902))
-    image.paste(viewport,(30,467),viewport)
+    viewport=layer.crop((30,279,691,902))
+    image.paste(viewport,(30,279),viewport)
     return image
