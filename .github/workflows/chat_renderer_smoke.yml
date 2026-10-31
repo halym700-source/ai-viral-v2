@@ -5,6 +5,8 @@ on:
     paths:
       - 'chat_renderer/render.py'
       - 'chat_renderer/pastel_layout.py'
+      - 'chat_renderer/reference_layout.py'
+      - 'chat_renderer/reference_assets.json'
       - 'chat_renderer/reference_assets.json'
       - 'chat_renderer/smoke_test.py'
       - '.github/workflows/chat_renderer_smoke.yml'
@@ -25,7 +27,7 @@ jobs:
       - name: Install render dependencies
         run: |
           # Static FFmpeg via PyPI avoids Ubuntu apt mirrors, which stalled.
-          python -m pip install --disable-pip-version-check pillow==11.3.0 pydub==0.25.1 edge-tts==7.3.1 imageio-ffmpeg==0.6.0
+          python -m pip install --disable-pip-version-check pillow==11.3.0 pydub==0.25.1 edge-tts==7.3.1 imageio-ffmpeg==0.6.0 numpy==2.2.6
           mkdir -p "$RUNNER_TEMP/textvibe-bin"
           ln -sf "$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" "$RUNNER_TEMP/textvibe-bin/ffmpeg"
           echo "$RUNNER_TEMP/textvibe-bin" >> "$GITHUB_PATH"
