@@ -43,3 +43,12 @@
 - `reshranks_autopilot/render.py`
 - `workflows/RESH_RANKS_V3_FULL_AUTOPILOT_N8N.json`
 - `RESH_RANKS_V3_KURULUM_TR.md`
+## Gercek GitHub Actions test sonucu (2026-10-31)
+
+- Test 1: `YOUTUBE_DATA_API_KEY` eksik (GitHub run 41161875800).
+- Test 2: Mevcut `YOUTUBE_RESEARCH_API_KEY` anahtariyla CC YouTube aramasi calisti: 34 aday bulundu (run 41161923706).
+- Test 2: Uc bagimsiz Youtube videosu `yt-dlp` ile indirilemedi; YouTube otomatik erisim icin oturum dogrulamasi istedi. Basarili download: 0/3.
+- GitHub V3 workflow'unda `YOUTUBE_DATA_API_KEY || YOUTUBE_RESEARCH_API_KEY` yedegi eklendi; artik yeni API anahtari olusturulmadan arama calisabilir.
+- Bulunan dosyalarla H264/AAC 1080x1920, 22.82 sn yerel render testi basariliydi. Bu, otomatik Youtube indirme basarisi anlamina gelmez.
+- **Canli otomatik indir/yayin sistemi aktif DEGIL**. n8n OAuth kurulumu ve indirme icin izinli/guvenilir erisim cozumu gerekiyor. YouTube oturum veya bot engeli asilmasi saglanmiyor.
+- Butun testler YouTube'a video yuklemeden calistirildi.
