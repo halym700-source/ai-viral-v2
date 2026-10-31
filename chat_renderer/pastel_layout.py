@@ -119,7 +119,7 @@ def render_frame(t,starts,lines,contact_name,peer,duration,width=720,height=1280
         future=max(0,full-(bottom-top-10))
         y=top+7-round(scroll+(future-scroll)*(1-(1-elapsed)**3))
         for i,msg,rows,bh in block:
-            if y<top+8 or y>bottom:
+            if y+bh<top+25 or y>bottom:
                 y+=bh+12
                 continue
             own=msg['speaker']=='me'
