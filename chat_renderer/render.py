@@ -524,7 +524,8 @@ def load_contact_portrait(role):
     print(f"Portrait unavailable for {role}; using local fallback avatar.")
     return None
 
-PROFILE_PHOTO = load_contact_portrait(PEER)
+# Pastel template draws its own consistent fictional portraits; no stock-photo network calls.
+PROFILE_PHOTO = None
 
 def build_audio(paths):
     master = AudioSegment.silent(duration=180)
@@ -563,100 +564,12 @@ def bubble_size(draw, msg):
     rows = safe_wrap(draw, msg["text"], F["text"], CHAT_TEXT_WIDTH)
     return rows, 24 + len(rows) * CHAT_LINE_HEIGHT + 25
 
+from pastel_layout import render_frame as pastel_render_frame
+
 def draw_frame(t, start_times):
-    image = BASE.copy()
-    d = ImageDraw.Draw(image)
-
-    # Familiar yet originally drawn chat app header, not an app screenshot.
-    d.rectangle((0, 0, W, 127), fill=(255, 255, 255))
-    d.line((0, 126, W, 126), fill=(204, 204, 202), width=2)
-    d.line(((23, 49), (11, 63), (23, 77)), fill=(67, 74, 77), width=4)
-    d.ellipse((42, 20, 133, 111), fill=(182, 195, 172))
-    if PROFILE_PHOTO is not None:
-        mask = Image.new("L", (92, 92), 0)
-        ImageDraw.Draw(mask).ellipse((0, 0, 91, 91), fill=255)
-        image.paste(PROFILE_PHOTO, (42, 20), mask)
-        d.ellipse((42, 20, 133, 111), outline=(234, 234, 231), width=2)
-    else:
-        # Offline/no-connection avatar: real photo is never fabricated.
-        d.ellipse((68, 43, 109, 85), fill=(229, 206, 167))
-        d.arc((64, 48, 113, 101), 185, 356, fill=(107, 93, 77), width=3)
-    name = CONTACT_NAME[:16].upper()
-    d.text((150, 28), name, font=F["head"], fill=(29, 34, 37))
-    subtitle = (CONTACT_ROLE + "  •  online") if LANG == "en" else (CONTACT_ROLE + "  •  çevrimiçi")
-    d.text((153, 81), subtitle, font=F["tiny"], fill=(113, 117, 115))
-    # Camcorder, telephone, more buttons in our own glyph style.
-    d.rounded_rectangle((541, 47, 575, 75), radius=4, outline=(41,45,48),width=3)
-    d.polygon([(575, 54), (589, 46), (589, 77), (575, 70)],fill=(41,45,48))
-    d.arc((610, 41, 651, 81), 32, 143, fill=(41,45,48), width=5)
-    for yy in (48, 60, 72):
-        d.ellipse((686, yy, 693, yy+7),fill=(43,46,49))
-
-    layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ld = ImageDraw.Draw(layer)
-    visible = [i for i, start in enumerate(start_times) if start <= t]
-    if visible:
-        entries = [(i, lines[i], *bubble_size(ld, lines[i])) for i in visible]
-        heights = [entry[3] + CHAT_GAP for entry in entries]
-        usable = CHAT_BOTTOM - CHAT_TOP - 12
-        cumulative = sum(heights)
-        prev = cumulative - heights[-1]
-        elapsed = max(0.0, min(1.0, (t - start_times[visible[-1]]) / .34))
-        ease = 1.0 - (1.0 - elapsed)**3
-        scroll_prev = max(0, prev - usable)
-        scroll_next = max(0, cumulative - usable)
-        scroll = scroll_prev + (scroll_next - scroll_prev) * ease
-        y = CHAT_TOP + 9 - round(scroll)
-
-        for i, msg, rows, height in entries:
-            if y + height < CHAT_TOP or y > CHAT_BOTTOM:
-                y += height + CHAT_GAP
-                continue
-            own = msg["speaker"] == "me"
-            widest = max(ld.textbbox((0, 0), row, font=F["text"])[2] for row in rows)
-            bubble_w = max(195, min(W - 49, widest + 48))
-            left = W - 24 - bubble_w if own else 24
-            right = left + bubble_w
-            easing = max(0, min(1, (t-start_times[i])/.20))
-            left += int((1-easing)*(13 if own else -13))
-            right += int((1-easing)*(13 if own else -13))
-            background = (213, 246, 195, 255) if own else (255, 255, 255, 255)
-            outline = (191, 226, 176, 255) if own else (225, 226, 219, 255)
-            ld.rounded_rectangle((left, y, right, y+height), radius=19,
-                                 fill=background, outline=outline, width=1)
-            # Speech-bubble tails: subtle, readable and familiar.
-            if own:
-                ld.polygon([(right-3,y+11),(right+9,y+16),(right-3,y+31)],fill=background)
-            else:
-                ld.polygon([(left+3,y+11),(left-8,y+16),(left+3,y+31)],fill=background)
-            ty = y+14
-            for row in rows:
-                ld.text((left+21, ty), row, font=F["text"], fill=(23, 29, 29, 255))
-                ty += CHAT_LINE_HEIGHT
-            # A small timestamp and double checkmarks make it feel like a chat.
-            mm = 35+(i//6)
-            stamp = f"14:{mm:02d}"
-            font = F["tiny"]
-            sw = ld.textbbox((0,0),stamp,font=font)[2]
-            ld.text((right-15-sw-(29 if own else 0),y+height-30),
-                    stamp,font=font,fill=(125,135,134,255))
-            if own:
-                check_x = right - 31
-                cy=y+height-20
-                ld.line([(check_x-7,cy-2),(check_x-3,cy+2),(check_x+4,cy-6)],
-                        fill=(40,153,201,255),width=2)
-                ld.line([(check_x,cy-2),(check_x+4,cy+2),(check_x+11,cy-6)],
-                        fill=(40,153,201,255),width=2)
-            y += height + CHAT_GAP
-    viewport = layer.crop((0,CHAT_TOP,W,CHAT_BOTTOM))
-    image.paste(viewport,(0,CHAT_TOP),viewport)
-
-    # The bottom remains wallpaper, not a fake message box covering the ending.
-    # A quiet timeline under the chat avoids interference with Shorts UI.
-    d.rectangle((0,1110,W,1118),fill=(221,219,206))
-    progress = max(0,min(1,t/max(VIDEO_DURATION,0.001)))
-    d.rectangle((0,1110,round(W*progress),1118),fill=(90,174,138))
-    return image
+    """Reference-style cream conversation card with persistent main character."""
+    return pastel_render_frame(t, start_times, lines, CONTACT_NAME, PEER,
+                               globals().get("VIDEO_DURATION", 60), W, H)
 
 def encode(wav, starts, duration):
     global VIDEO_DURATION
