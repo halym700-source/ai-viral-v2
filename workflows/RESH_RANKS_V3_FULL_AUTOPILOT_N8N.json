@@ -1,0 +1,630 @@
+{
+  "name": "RESH RANKS V3 - AUTO FIND 5 YOUTUBE CC CLIPS - HPC EDIT - PUBLIC PUBLISH",
+  "nodes": [
+    {
+      "id": "rr-auto-1",
+      "name": "01 Scheduled twice daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        280
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "15 12,19 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rr-auto-2",
+      "name": "01 Manual test run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        550
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "rr-auto-3",
+      "name": "02 Prepare unique render job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "jsCode": "// Does not require user to supply links. GitHub searches CC-BY YouTube footage.\nconst stamp=new Date().toISOString().replace(/[-:.TZ]/g,'').slice(0,14);\nconst execution=String($execution.id||'manual').replace(/[^a-z0-9]/gi,'').slice(0,14);\nreturn [{json:{job_id:'rr-'+stamp+'-'+execution,render_workflow:'reshranks_autopilot.yml'}}];"
+      }
+    },
+    {
+      "id": "rr-auto-4",
+      "name": "03 Launch discover download and HPC edit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/repos/halym700-source/ai-viral-v2/actions/workflows/reshranks_autopilot.yml/dispatches",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ref:'main',inputs:{job_id:$json.job_id,theme:''}}) }}",
+        "options": {
+          "timeout": 60000
+        }
+      }
+    },
+    {
+      "id": "rr-auto-5",
+      "name": "04 Wait for GitHub",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        760,
+        300
+      ],
+      "parameters": {
+        "amount": 40
+      },
+      "webhookId": "rr-auto-wait-40s"
+    },
+    {
+      "id": "rr-auto-6",
+      "name": "05 Read GitHub job result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1020,
+        300
+      ],
+      "parameters": {
+        "url": "https://api.github.com/repos/halym700-source/ai-viral-v2/actions/workflows/reshranks_autopilot.yml/runs?per_page=50",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      }
+    },
+    {
+      "id": "rr-auto-7",
+      "name": "06 Check success or error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1270,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const job=$('02 Prepare unique render job').first().json.job_id;\nconst runs=$input.first().json.workflow_runs||[];\nconst match=runs.find(r=>String(r.display_title||'').includes(job));\nif(match?.status==='completed' && match.conclusion!=='success'){\n throw new Error('GitHub video discovery or download failed. Run '+match.html_url+' concluded: '+match.conclusion+'. Nothing published.');\n}\nreturn [{json:{ready:match?.status==='completed'&&match.conclusion==='success',job_id:job,run_url:match?.html_url||''}}];"
+      }
+    },
+    {
+      "id": "rr-auto-8",
+      "name": "07 GitHub finished successfully",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1510,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "ready",
+              "leftValue": "={{ $json.ready === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "rr-auto-9",
+      "name": "08 Retry while GitHub is working",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1750,
+        540
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "limit",
+              "leftValue": "={{ $runIndex < 55 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "rr-auto-10",
+      "name": "09 Stop after timeout",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        2010,
+        680
+      ],
+      "parameters": {
+        "errorMessage": "ReshRanks GitHub action timed out. No YouTube video was uploaded."
+      }
+    },
+    {
+      "id": "rr-auto-11",
+      "name": "10 Find completed video artifact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1750,
+        300
+      ],
+      "parameters": {
+        "url": "https://api.github.com/repos/halym700-source/ai-viral-v2/actions/artifacts?per_page=100",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      }
+    },
+    {
+      "id": "rr-auto-12",
+      "name": "11 Verify completed artifact",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2010,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const job=$('02 Prepare unique render job').first().json.job_id;\nconst list=$input.first().json.artifacts||[];\nconst match=list.find(a=>a.name==='reshranks-auto-'+job&&!a.expired);\nreturn [{json:{ready:!!match,artifact_id:match?.id||0,job_id:job}}];"
+      }
+    },
+    {
+      "id": "rr-auto-13",
+      "name": "12 Artifact ready",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2250,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "art",
+              "leftValue": "={{ $json.ready === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "rr-auto-14",
+      "name": "13 Download finished MP4 ZIP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2490,
+        300
+      ],
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/halym700-source/ai-viral-v2/actions/artifacts/'+$json.artifact_id+'/zip' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 180000,
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "rr-auto-15",
+      "name": "14 Prepare artifact ZIP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2730,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const item=$input.first();if(!item.binary?.data)throw new Error('No GitHub artifact ZIP file');item.binary.data.fileName='reshranks.zip';item.binary.data.fileExtension='zip';item.binary.data.mimeType='application/zip';return [item];"
+      }
+    },
+    {
+      "id": "rr-auto-16",
+      "name": "15 Extract video and manifest",
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        2970,
+        300
+      ],
+      "parameters": {
+        "operation": "decompress",
+        "binaryPropertyName": "data",
+        "outputPrefix": "file_"
+      }
+    },
+    {
+      "id": "rr-auto-17",
+      "name": "16 Quality check and YouTube metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3210,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const items=$input.all();\nlet mp4=null, manifest=null;\nfor(let i=0;i<items.length;i++){\n for(const [key,bin] of Object.entries(items[i].binary||{})){\n  const name=String(bin.fileName||'').toLowerCase();\n  if(name.endsWith('short.mp4'))mp4=bin;\n  if(name.endsWith('manifest.json')){\n   const bytes=await this.helpers.getBinaryDataBuffer(i,key);\n   manifest=JSON.parse(bytes.toString('utf8'));\n  }\n }\n}\nif(!mp4||!manifest)throw new Error('Output MP4 or provenance manifest is missing');\nif(manifest.status!=='rendered_not_published'||manifest.duration_seconds<20||manifest.duration_seconds>24)throw new Error('Video failed HPC duration/status gate');\nif(manifest.width!==1080||manifest.height!==1920)throw new Error('Video must be 1080 x 1920');\nif(!Array.isArray(manifest.sources)||manifest.sources.length!==5||new Set(manifest.sources.map(s=>s.video_id)).size!==5)throw new Error('Source duplication or missing sources');\nif(manifest.sources.some(s=>s.rights!=='cc_by_verified'||!s.rights_evidence||!s.attribution))throw new Error('One or more source license/credit checks failed');\nmp4.fileName='reshranks_short.mp4';mp4.fileExtension='mp4';mp4.mimeType='video/mp4';\nreturn [{json:{title:String(manifest.title).slice(0,100),description:String(manifest.description).slice(0,4900),job_id:$('02 Prepare unique render job').first().json.job_id,source_count:manifest.sources.length,duration:manifest.duration_seconds,topic:manifest.topic},binary:{data:mp4}}];"
+      }
+    },
+    {
+      "id": "rr-auto-18",
+      "name": "17 YouTube OAuth - publish PUBLIC",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        3450,
+        300
+      ],
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{ $json.title }}",
+        "regionCode": "US",
+        "categoryId": "2",
+        "binaryProperty": "data",
+        "options": {
+          "description": "={{ $json.description }}",
+          "privacyStatus": "public",
+          "notifySubscribers": false,
+          "selfDeclaredMadeForKids": false
+        }
+      }
+    },
+    {
+      "id": "rr-auto-19",
+      "name": "18 Record published video",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3690,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const upload=$input.first().json;\nconst id=upload.uploadId||upload.id;\nif(!id)throw new Error('YouTube upload did not confirm the video ID');\nconst config=$('16 Quality check and YouTube metadata').first().json;\nconst state=$getWorkflowStaticData('global');\nstate.lastPublished={job_id:config.job_id,video_id:id,title:config.title,topic:config.topic,date:new Date().toISOString()};\nreturn [{json:{status:'published',video_id:id,video_url:'https://youtube.com/watch?v='+id,job_id:config.job_id,title:config.title,topic:config.topic,duration:config.duration}}];"
+      }
+    }
+  ],
+  "connections": {
+    "01 Scheduled twice daily": {
+      "main": [
+        [
+          {
+            "node": "02 Prepare unique render job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "01 Manual test run": {
+      "main": [
+        [
+          {
+            "node": "02 Prepare unique render job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 Prepare unique render job": {
+      "main": [
+        [
+          {
+            "node": "03 Launch discover download and HPC edit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 Launch discover download and HPC edit": {
+      "main": [
+        [
+          {
+            "node": "04 Wait for GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "04 Wait for GitHub": {
+      "main": [
+        [
+          {
+            "node": "05 Read GitHub job result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "05 Read GitHub job result": {
+      "main": [
+        [
+          {
+            "node": "06 Check success or error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "06 Check success or error": {
+      "main": [
+        [
+          {
+            "node": "07 GitHub finished successfully",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10 Find completed video artifact": {
+      "main": [
+        [
+          {
+            "node": "11 Verify completed artifact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11 Verify completed artifact": {
+      "main": [
+        [
+          {
+            "node": "12 Artifact ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "13 Download finished MP4 ZIP": {
+      "main": [
+        [
+          {
+            "node": "14 Prepare artifact ZIP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "14 Prepare artifact ZIP": {
+      "main": [
+        [
+          {
+            "node": "15 Extract video and manifest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "15 Extract video and manifest": {
+      "main": [
+        [
+          {
+            "node": "16 Quality check and YouTube metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "16 Quality check and YouTube metadata": {
+      "main": [
+        [
+          {
+            "node": "17 YouTube OAuth - publish PUBLIC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "17 YouTube OAuth - publish PUBLIC": {
+      "main": [
+        [
+          {
+            "node": "18 Record published video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "07 GitHub finished successfully": {
+      "main": [
+        [
+          {
+            "node": "10 Find completed video artifact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "08 Retry while GitHub is working",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "08 Retry while GitHub is working": {
+      "main": [
+        [
+          {
+            "node": "04 Wait for GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "09 Stop after timeout",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12 Artifact ready": {
+      "main": [
+        [
+          {
+            "node": "13 Download finished MP4 ZIP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "08 Retry while GitHub is working",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Istanbul"
+  },
+  "active": false,
+  "pinData": {},
+  "tags": []
+}
