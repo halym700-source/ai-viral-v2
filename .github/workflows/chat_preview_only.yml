@@ -20,12 +20,16 @@ jobs:
           python -m pip install --disable-pip-version-check pillow==11.3.0 pydub==0.25.1 edge-tts==7.3.1 imageio-ffmpeg==0.6.0
           if ! command -v ffprobe >/dev/null 2>&1; then
             sudo apt-get update -qq
-            sudo apt-get install -y -qq ffmpeg
+            sudo apt-get install -y -qq ffmpeg espeak
           fi
+      - name: Verify offline TTS fallback
+        run: |
+          if ! command -v espeak >/dev/null 2>&1; then sudo apt-get install -y -qq espeak; fi
       - name: Generate private test video (no upload)
         env:
           CHAT_LANG: en
           CHAT_TTS_PROVIDER: edge
+          CHAT_PREVIEW_FALLBACK_TTS: '1'
           CHAT_JSON: '{"chatTitle":"Dad","dialogue":[{"speaker":"me","text":"Dad, why is there a goat in our kitchen?"},{"speaker":"father","text":"Do not tell your mother."},{"speaker":"me","text":"It just ate my homework."},{"speaker":"father","text":"That was the original plan."},{"speaker":"me","text":"You bought a goat for my homework?"},{"speaker":"father","text":"No. For the garden."},{"speaker":"me","text":"Then why is it wearing your glasses?"},{"speaker":"father","text":"He likes to look professional."},{"speaker":"me","text":"Mom is pulling into the driveway."},{"speaker":"father","text":"Tell her it is your new tutor."},{"speaker":"me","text":"It just sneezed on my report card."},{"speaker":"father","text":"Great. He has already graded you."}]}'
         run: python chat_renderer/render.py
       - name: Store MP4 for review (not YouTube)
