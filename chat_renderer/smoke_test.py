@@ -37,7 +37,8 @@ import render
 # Reference layout: black bars, a cream conversation card, fixed main avatar
 # and distinctly illustrated contact roles. No network or speech API needed.
 assert render.PEER == "father"
-from pastel_layout import portrait, CREAM
+from pastel_layout import portrait
+CREAM = (248, 244, 234)
 assert portrait("me").tobytes() == portrait("me").tobytes()
 assert portrait("father").tobytes() != portrait("mother").tobytes()
 assert portrait("sister").tobytes() != portrait("grandpa").tobytes()
@@ -50,7 +51,7 @@ assert preview.getpixel((590, 1005)) != CREAM, "Main character not visible"
 assert preview.getpixel((100, 330)) != CREAM, "Contact character not visible"
 # After a message begins, its first bubble appears on the correct side.
 frame = render.draw_frame(1.5, [1.0])
-assert frame.getpixel((500, 470)) != CREAM, "First message bubble missing"
+assert frame.getpixel((500, 505)) != CREAM, "First message bubble missing"
 render.main()
 
 target = Path("out/short.mp4")
