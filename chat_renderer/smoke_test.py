@@ -34,31 +34,23 @@ os.environ["CHAT_JSON"] = json.dumps({
 })
 import render
 
-# Verify full-width outgoing bubble layout and a real image can be loaded into
-# the 92px circular avatar without relying on external image-host availability.
-assert render.CHAT_TEXT_WIDTH >= 560
+# Reference layout: black bars, a cream conversation card, fixed main avatar
+# and distinctly illustrated contact roles. No network or speech API needed.
 assert render.PEER == "father"
-from unittest.mock import patch
-from PIL import Image
-import io
-
-jpeg = io.BytesIO()
-Image.new("RGB", (128, 128), (84, 131, 152)).save(jpeg, format="JPEG")
-def fake_pexels_response(req, timeout=8):
-    assert req.full_url.startswith("https://images.pexels.com/photos/")
-    return io.BytesIO(jpeg.getvalue())
-
-with patch.dict(os.environ, {"CHAT_TEST_MODE": "0"}):
-    with patch.object(render.urllib.request, "urlopen",
-                      side_effect=fake_pexels_response):
-        photo = render.load_contact_portrait("father")
-assert photo is not None and photo.size == (92, 92)
-# Force the test image into the actual rendered video frame as well.
-render.PROFILE_PHOTO = photo
+from pastel_layout import portrait, CREAM
+assert portrait("me").tobytes() == portrait("me").tobytes()
+assert portrait("father").tobytes() != portrait("mother").tobytes()
+assert portrait("sister").tobytes() != portrait("grandpa").tobytes()
 render.VIDEO_DURATION = 12
 preview = render.draw_frame(0, [])
-assert sum(abs(x-y) for x,y in zip(preview.getpixel((85, 60)), (84, 131, 152))) < 24, "Profile image is not visible in header"
-
+assert preview.size == (720, 1280)
+assert preview.getpixel((5, 5)) == (0, 0, 0), "Top black safe space missing"
+assert preview.getpixel((30, 180)) == CREAM, "Cream card missing"
+assert preview.getpixel((520, 1070)) != CREAM, "Main character not visible"
+assert preview.getpixel((100, 330)) != CREAM, "Contact character not visible"
+# After a message begins, its first bubble appears on the correct side.
+frame = render.draw_frame(1.5, [1.0])
+assert frame.getpixel((55, 470)) != CREAM, "First message bubble missing"
 render.main()
 
 target = Path("out/short.mp4")
