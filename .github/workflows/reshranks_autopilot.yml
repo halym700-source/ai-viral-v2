@@ -1,0 +1,67 @@
+name: ReshRanks HPC Autopilot
+run-name: ReshRanks Auto ${{ inputs.job_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: Unique n8n execution ID
+        required: true
+        type: string
+      theme:
+        description: Optional - motorcycle_revs, supercar_exhaust, motorcycle_startups
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: reshranks-auto-${{ inputs.job_id }}
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install FFmpeg and video tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+          python -m pip install --disable-pip-version-check --upgrade 'yt-dlp[default]' 'Pillow>=10,<12'
+      - name: Discover 5 usable CC-BY YouTube sources under one topic
+        env:
+          YOUTUBE_DATA_API_KEY: ${{ secrets.YOUTUBE_DATA_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RESH_THEME: ${{ inputs.theme }}
+          RESH_WORK: out
+        run: python reshranks_autopilot/discover.py
+      - name: Produce 22.8 second Hook Progression Climax video
+        env:
+          RESH_WORK: out
+        run: python reshranks_autopilot/render.py
+      - name: Store MP4, attribution manifest, preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: reshranks-auto-${{ inputs.job_id }}
+          path: |
+            out/short.mp4
+            out/manifest.json
+            out/preview.jpg
+          if-no-files-found: error
+          retention-days: 7
+      - name: Store small source history to prevent repetition
+        uses: actions/upload-artifact@v4
+        with:
+          name: reshranks-ledger-${{ inputs.job_id }}
+          path: out/manifest.json
+          if-no-files-found: error
+          retention-days: 30
