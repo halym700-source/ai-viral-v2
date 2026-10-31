@@ -1,7 +1,7 @@
 """TextVibeStories reference-style 9:16 conversation renderer.
 
 The two base character portraits are taken from the user's own design.
-The right-bottom character never changes. Other contacts are visual
+The bottom-right character never changes. Other contacts are visual
 variations that follow their role; no stock photographs are fetched.
 """
 import base64
@@ -150,6 +150,9 @@ def render_frame(t,starts,lines,contact_name,peer,duration,width=720,height=1280
     d.rectangle((0,122,W,1161),fill=PAGE)
     d.rounded_rectangle((18,143,702,1138),radius=39,
                         fill=CREAM,outline=(229,221,207),width=2)
+    from photo_wallpapers import apply_wallpaper
+    apply_wallpaper(image)
+    d=ImageDraw.Draw(image)
     d.line([(36,249),(685,249)],fill=(219,215,208),width=2)
     d.line([(63,194),(51,207),(63,219)],fill=TEXT,width=4,joint='curve')
     bubble_font,title_font=fonts()
@@ -162,7 +165,7 @@ def render_frame(t,starts,lines,contact_name,peer,duration,width=720,height=1280
     d.rounded_rectangle((639,204,669,214),radius=3,fill=TEXT)
     d.ellipse((646,207,658,218),fill=CREAM)
     # Only one large character remains: the original fixed 22-year-old narrator
-    # at bottom LEFT. All other people appear only as circular contact photos.
+    # at bottom RIGHT. Other people appear only as circular header contact photos.
     photo=portrait(peer,76,76)
     circle=Image.new('L',(76,76),0)
     ImageDraw.Draw(circle).ellipse((2,2,73,73),fill=255)
@@ -173,7 +176,7 @@ def render_frame(t,starts,lines,contact_name,peer,duration,width=720,height=1280
     d=ImageDraw.Draw(image)
     d.ellipse((85,167,160,242),outline=(224,218,209),width=2)
     main=portrait('me',207,222)
-    image.paste(main,(35,897),main)
+    image.paste(main,(479,897),main)
 
     layer=Image.new('RGBA',(W,H),(0,0,0,0))
     ld=ImageDraw.Draw(layer)
