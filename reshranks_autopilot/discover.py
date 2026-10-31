@@ -181,19 +181,38 @@ def download_videos(candidates, work, wanted=5):
              '--socket-timeout','20','--retries','1','--fragment-retries','1',
              '--max-filesize','160M','-f','bv*[height<=1080]+ba/b[height<=1080]/b',
              '--merge-output-format','mp4','-o',str(out),c['url']]
+        archived=None
         try:
             run(cmd,timeout=160)
+            matches=list(work.glob(f'candidate_{i}.*'))
         except (subprocess.CalledProcessError,subprocess.TimeoutExpired):
-            print('Skipping unavailable video:',c['video_id'],flush=True)
+            print('Direct YouTube download blocked:',c['video_id'],flush=True)
+            matches=[]
+        if len(matches)!=1:
+            # Only accept a Commons mirror of this exact YouTube ID with CC-BY
+            # metadata. Do not accept unrelated substitutes or silent stock.
+            try:
+                from commons_mirror import download_youtube_cc_archive
+                archived=download_youtube_cc_archive(c['video_id'],work/f'candidate_{i}_cc_mirror')
+                matches=[archived[0]] if archived else []
+            except Exception as err:
+                print('Exact-ID Commons CC mirror unavailable:',c['video_id'],type(err).__name__,flush=True)
+                matches=[]
+        if len(matches)!=1:
+            print('No downloadable original or verified archive:',c['video_id'],flush=True)
             continue
-        matches=list(work.glob(f'candidate_{i}.*'))
-        if len(matches)!=1: continue
         quality=audio_analysis(matches[0])
         if not quality:
             print('Skipping silent/unsuitable video:',c['video_id'],flush=True)
             matches[0].unlink(missing_ok=True)
             continue
         c=dict(c, **quality, file=str(matches[0].resolve()))
+        if archived:
+            info=archived[1]
+            c['rights_evidence'] += '; Wikimedia Commons exact-ID CC-BY license: '+info['license']
+            c['archive_url']=info['archive_url']
+            c['license_url']=info['license_url']
+            print('Exact-ID CC archive downloaded:',c['video_id'],flush=True)
         selected.append(c)
         if c['channel_id']: used_channels.add(c['channel_id'])
         print('Selected:',c['video_id'], 'audio=',c['energy'],flush=True)
@@ -241,7 +260,8 @@ def main():
                     'url':c['url'], 'local_file':c['file'], 'start':c['start'],
                     'video_id':c['video_id'], 'channel':c['channel'], 'rights':'cc_by_verified',
                     'rights_evidence':c['rights_evidence'], 'energy':c['energy'],
-                    'source_title':c['title'], 'attribution':c['url']})
+                    'source_title':c['title'], 'attribution':c['url'], 'archive_url':c.get('archive_url'),
+                    'license_url':c.get('license_url')})
             # Final rank #1 is the strongest selected sound (relative audio level only).
             payload={'topic':theme['name'], 'theme':theme['key'], 'sources':sources,
                 'discovery_mode':'youtube_api_cc_by',
