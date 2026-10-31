@@ -46,7 +46,7 @@ preview = render.draw_frame(0, [])
 assert preview.size == (720, 1280)
 assert preview.getpixel((5, 5)) == (0, 0, 0), "Top black safe space missing"
 assert preview.getpixel((30, 180)) == CREAM, "Cream card missing"
-assert preview.getpixel((520, 1070)) != CREAM, "Main character not visible"
+assert preview.getpixel((590, 1005)) != CREAM, "Main character not visible"
 assert preview.getpixel((100, 330)) != CREAM, "Contact character not visible"
 # After a message begins, its first bubble appears on the correct side.
 frame = render.draw_frame(1.5, [1.0])
