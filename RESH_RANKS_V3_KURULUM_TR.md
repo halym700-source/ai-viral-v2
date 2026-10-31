@@ -52,3 +52,15 @@
 - Bulunan dosyalarla H264/AAC 1080x1920, 22.82 sn yerel render testi basariliydi. Bu, otomatik Youtube indirme basarisi anlamina gelmez.
 - **Canli otomatik indir/yayin sistemi aktif DEGIL**. n8n OAuth kurulumu ve indirme icin izinli/guvenilir erisim cozumu gerekiyor. YouTube oturum veya bot engeli asilmasi saglanmiyor.
 - Butun testler YouTube'a video yuklemeden calistirildi.
+
+
+## 2026-10-31: Otomatik indirme icin test edilmis yedek yontem
+
+- Duz YouTube download testinde tv/web_safari, Android, iOS ve web_embedded oynatici istemcilerinin **tamami oturum/bot dogrulamasi nedeniyle basarisiz** oldu. Test: https://github.com/halym700-source/ai-viral-v2/actions/runs/41162343164
+- Wikimedia Commons uzerinde orijinal YouTube video kimligi ile **otomatik arama basarili**: `R-YJw6-Sshk` kimligi Wikimedia'daki dogru arsiv dosyasiyla eslesti.
+- Commons dosyasinda **CC BY 3.0** lisans bilgisi kontrol edildi; 12,978,534 bayt video indirildi, FFprobe ile goruntu ve orijinal ses kanallari dogrulandi. Test: https://github.com/halym700-source/ai-viral-v2/actions/runs/41162786336
+- V3 arama motoruna `reshranks_autopilot/commons_mirror.py` dosyasi ve **yalnizca birebir YouTube video ID'si ve CC-BY lisansi eslesen** Wikimedia Commons arsiv kopyasini indirmeyi deneyen yedek yol eklendi. Bu yol Youtubedaki tum videolar icin bulunmayabilir.
+- Kaynak bulunamazsa veya orijinal ses yoksa hicbir yanlis kaynak kullanilmaz ve yayin baslatilmaz.
+- CC BY arsiv kaynagi kullanilirsa olusan YouTube aciklamasina arsi̇v ve lisans URL'leri dahil edilir.
+- Baska bir testte Pixabay'dan dogrudan MP4 indirildi (1,847,363 bayt), **ama video ses kanali icermiyordu**; motor sesleri rankinginde bu kaynak uygun kabul edilmez. Test: https://github.com/halym700-source/ai-viral-v2/actions/runs/41162413001
+- Tum denemeler YouTube'a video yuklemeden yapildi. n8n OAuth baglantisi ve 5 kullanilabilir eslesmenin canli testi tamamlanmadigi icin tum surecin otomatik yayina hazir oldugu iddia edilmez.
