@@ -577,11 +577,11 @@ def bubble_size(draw, msg):
     rows = safe_wrap(draw, msg["text"], F["text"], CHAT_TEXT_WIDTH)
     return rows, 24 + len(rows) * CHAT_LINE_HEIGHT + 25
 
-from pastel_layout import render_frame as pastel_render_frame
+from reference_layout import render_frame as reference_render_frame
 
 def draw_frame(t, start_times):
     """Reference-style cream conversation card with persistent main character."""
-    return pastel_render_frame(t, start_times, lines, CONTACT_NAME, PEER,
+    return reference_render_frame(t, start_times, lines, CONTACT_NAME, PEER,
                                globals().get("VIDEO_DURATION", 60), W, H)
 
 def encode(wav, starts, duration):
