@@ -50,7 +50,7 @@ assert preview.getpixel((520, 1070)) != CREAM, "Main character not visible"
 assert preview.getpixel((100, 330)) != CREAM, "Contact character not visible"
 # After a message begins, its first bubble appears on the correct side.
 frame = render.draw_frame(1.5, [1.0])
-assert frame.getpixel((55, 470)) != CREAM, "First message bubble missing"
+assert frame.getpixel((500, 470)) != CREAM, "First message bubble missing"
 render.main()
 
 target = Path("out/short.mp4")
