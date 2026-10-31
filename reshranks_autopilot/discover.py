@@ -178,7 +178,7 @@ def download_videos(candidates, work, wanted=5):
             continue
         out=work/f'candidate_{i}.%(ext)s'
         cmd=['yt-dlp','--no-playlist','--no-progress','--no-warnings',
-             '--no-call-home','--socket-timeout','20','--retries','1','--fragment-retries','1',
+             '--socket-timeout','20','--retries','1','--fragment-retries','1',
              '--max-filesize','160M','-f','bv*[height<=1080]+ba/b[height<=1080]/b',
              '--merge-output-format','mp4','-o',str(out),c['url']]
         try:
