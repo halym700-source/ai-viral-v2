@@ -44,7 +44,8 @@ if not isinstance(lines, list) or not (9 <= len(lines) <= 16):
     raise ValueError("Expected 9 to 16 chat messages")
 allowed = {"me", "girlfriend", "boyfriend", "mother", "father", "grandpa",
            "grandma", "maternal_grandma", "paternal_grandma", "daughter", "son",
-           "uncle", "aunt", "friend", "sister", "brother"}
+           "uncle", "aunt", "friend", "sister", "brother",
+           "older_brother", "younger_brother", "younger_sister"}
 for line in lines:
     if line.get("speaker") not in allowed:
         raise ValueError(f"Unrecognized speaker: {line.get('speaker')}")
@@ -72,6 +73,9 @@ EN_VOICES = {
     "friend": ("en-US-SteffanNeural", "+0%", "+0Hz"),
     "sister": ("en-US-AvaNeural", "+0%", "+0Hz"),
     "brother": ("en-US-EricNeural", "+0%", "+0Hz"),
+    "younger_brother": ("en-US-EricNeural", "+0%", "+0Hz"),
+    "older_brother": ("en-US-SteffanNeural", "+0%", "+0Hz"),
+    "younger_sister": ("en-US-AvaNeural", "+0%", "+0Hz"),
 }
 TR_VOICES = {
     "me": ("tr-TR-AhmetNeural", "+0%", "+0Hz"),
@@ -90,6 +94,9 @@ TR_VOICES = {
     "friend": ("tr-TR-AhmetNeural", "+6%", "+3Hz"),
     "sister": ("tr-TR-EmelNeural", "+7%", "+9Hz"),
     "brother": ("tr-TR-AhmetNeural", "+4%", "+4Hz"),
+    "younger_brother": ("tr-TR-AhmetNeural", "+4%", "+4Hz"),
+    "older_brother": ("tr-TR-AhmetNeural", "+0%", "+0Hz"),
+    "younger_sister": ("tr-TR-EmelNeural", "+7%", "+9Hz"),
 }
 VOICES = EN_VOICES if LANG == "en" else TR_VOICES
 DISPLAY = {
@@ -98,13 +105,17 @@ DISPLAY = {
            "grandma": "Grandma", "maternal_grandma": "Grandma",
            "paternal_grandma": "Grandma", "daughter": "Daughter", "son": "Son",
            "uncle": "Uncle", "aunt": "Aunt",
-           "friend": "Bestie", "sister": "Sis", "brother": "Bro"},
+           "friend": "Bestie", "sister": "Little Sis", "brother": "Little Bro",
+           "younger_sister": "Little Sis", "younger_brother": "Little Bro",
+           "older_brother": "Big Bro"},
     "tr": {"me": "Sen", "girlfriend": "Aşkım", "boyfriend": "Aşkım",
            "mother": "Annem", "father": "Babam", "grandpa": "Dedem",
            "grandma": "Ninem", "maternal_grandma": "Anneannem",
            "paternal_grandma": "Babaannem", "daughter": "Kızım", "son": "Oğlum",
            "uncle": "Amcam", "aunt": "Teyzem",
-           "friend": "Kankam", "sister": "Ablam", "brother": "Abim"},
+           "friend": "Kankam", "sister": "Kız kardeşim", "brother": "Erkek kardeşim",
+           "younger_sister": "Kız kardeşim", "younger_brother": "Erkek kardeşim",
+           "older_brother": "Abim"},
 }[LANG]
 
 
@@ -125,7 +136,10 @@ CONTACTS_EN = {
     "aunt": ("Aunt Lisa", "Aunt"),
     "friend": ("Alex", "Best friend"),
     "sister": ("Mia", "Sister"),
-    "brother": ("Jake", "Brother"),
+    "brother": ("Jake", "Younger brother"),
+    "younger_brother": ("Jake", "Younger brother"),
+    "older_brother": ("Ethan", "Older brother"),
+    "younger_sister": ("Mia", "Younger sister"),
 }
 CONTACTS_TR = {
     "girlfriend": ("Zeynep", "Sevgilin"),
@@ -142,7 +156,10 @@ CONTACTS_TR = {
     "aunt": ("Teyzem", "Teyze"),
     "friend": ("Ege", "Arkadaşın"),
     "sister": ("Elif", "Kardeşin"),
-    "brother": ("Mert", "Kardeşin"),
+    "brother": ("Mert", "Erkek kardeş"),
+    "younger_brother": ("Mert", "Erkek kardeş"),
+    "older_brother": ("Abim", "Abi"),
+    "younger_sister": ("Elif", "Kız kardeş"),
 }
 CONTACTS = CONTACTS_EN if LANG == "en" else CONTACTS_TR
 OTHER_SPEAKERS = [m["speaker"] for m in lines if m["speaker"] != "me"]
@@ -185,6 +202,9 @@ GEMINI_VOICES = {
     "friend": "Puck",
     "sister": "Kore",
     "brother": "Fenrir",
+    "younger_brother": "Fenrir",
+    "older_brother": "Puck",
+    "younger_sister": "Kore",
 }
 
 def gemini_delivery(index, msg):
