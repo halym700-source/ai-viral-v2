@@ -10,7 +10,7 @@ import hashlib
 import io
 import json
 import os
-import random
+import re
 import secrets
 import urllib.request
 from functools import lru_cache
@@ -20,7 +20,7 @@ from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageOps
 # Curated landscapes and interiors, avoiding identifiable faces and logos.
 PHOTO_IDS = (
     417074, 15286, 1366919, 1323550, 167964, 459203,
-    1450353, 2559941, 210186, 753626, 1080721, 1519088,
+    1450353, 2559941, 210186, 753626, 1080721, 1519088, 2774879,
 )
 PAPER_W, PAPER_H = 656, 882
 WASH = (248, 244, 234)
@@ -37,7 +37,17 @@ def seed_value():
 
 def choice_for_seed(seed):
     raw = hashlib.blake2b(str(seed).encode('utf8'), digest_size=16).digest()
-    # Always allow unique crop and hue even if the catalogue photo repeats.
+    # n8n job ids include a base36 Date.now() timestamp.
+    # Hour-by-hour cycling through a prime-sized catalogue makes consecutive
+    # scheduled videos (even videos exactly one day apart) use another photo.
+    match = re.match(r'^(?:en|tr)-([0-9a-z]+)-', str(seed))
+    if match:
+        try:
+            hour = int(match.group(1), 36) // 3_600_000
+            return hour % len(PHOTO_IDS), raw
+        except ValueError:
+            pass
+    # Other manual/private jobs still get independent random-looking choices.
     return int.from_bytes(raw[:4], 'big') % len(PHOTO_IDS), raw
 
 def image_from_photo(photo_id):
