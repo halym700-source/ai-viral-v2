@@ -1,0 +1,55 @@
+name: ReshRanks Public YouTube Research (No Publishing)
+on:
+  push:
+    paths:
+      - '.github/workflows/reshranks_daily_public_research.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      YT_KEY: ${{ secrets.YOUTUBE_DATA_API_KEY || secrets.YOUTUBE_RESEARCH_API_KEY }}
+    steps:
+      - name: Public YouTube API snapshot only
+        run: |
+          python - <<'PY'
+          import urllib.request,urllib.parse,json,os,datetime
+          key=os.getenv('YT_KEY','')
+          if not key:print('RESEARCH_ERROR: MISSING_KEY');quit()
+          def api(endpoint,**kw):
+              url='https://www.googleapis.com/youtube/v3/'+endpoint+'?'+urllib.parse.urlencode(dict(kw,key=key))
+              try:
+                  with urllib.request.urlopen(url,timeout=20) as r:return json.load(r)
+              except Exception as e:
+                  print('API_ERROR',endpoint,str(e)[:160]);return {}
+          def video_details(ids):
+              if not ids:return []
+              d=api('videos',part='snippet,statistics,contentDetails',id=','.join(ids))
+              out=[]
+              for v in d.get('items',[]):
+                  sn=v.get('snippet',{});st=v.get('statistics',{})
+                  out.append(dict(id=v['id'],title=sn.get('title'),published=sn.get('publishedAt'),channel=sn.get('channelTitle'),views=int(st.get('viewCount',0)),likes=int(st.get('likeCount',0)),duration=v.get('contentDetails',{}).get('duration')))
+              return out
+          print('RESEARCH_UTC',datetime.datetime.now(datetime.timezone.utc).isoformat(),flush=True)
+          c=api('channels',part='snippet,statistics,contentDetails',forHandle='@reshranks')
+          print('RESH_CHANNELS_MATCHED',len(c.get('items',[])),flush=True)
+          for channel in c.get('items',[]):
+              st=channel.get('statistics',{});sn=channel.get('snippet',{})
+              print('RESH_CHANNEL_PUBLIC',json.dumps(dict(id=channel['id'],title=sn.get('title'),subs=st.get('subscriberCount'),views=st.get('viewCount'),videoCount=st.get('videoCount')),ensure_ascii=False),flush=True)
+              pid=channel.get('contentDetails',{}).get('relatedPlaylists',{}).get('uploads')
+              if pid:
+                  items=api('playlistItems',part='contentDetails',playlistId=pid,maxResults=12).get('items',[])
+                  details=video_details([x['contentDetails']['videoId'] for x in items])
+                  for d in details:print('RESH_RECENT_PUBLIC',json.dumps(d,ensure_ascii=False),flush=True)
+          terms=['Ranking Funniest Monkey Moments','Ranking Funniest Dog Moments','Ranking Motorcycle Revs','Ranking Craziest BMX Tricks']
+          since=(datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=28)).strftime('%Y-%m-%dT%H:%M:%SZ')
+          for term in terms:
+              res=api('search',part='id,snippet',q=term,type='video',videoDuration='short',publishedAfter=since,order='viewCount',maxResults=12)
+              ids=[x.get('id',{}).get('videoId') for x in res.get('items',[]) if x.get('id',{}).get('videoId')]
+              items=sorted(video_details(ids),key=lambda x:x['views'],reverse=True)
+              print('TREND_QUERY',term,'COUNT',len(items),flush=True)
+              for d in items[:4]:print('TREND_PUBLIC',json.dumps(dict(query=term,**d),ensure_ascii=False),flush=True)
+          PY
