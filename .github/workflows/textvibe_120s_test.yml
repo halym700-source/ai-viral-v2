@@ -1,0 +1,47 @@
+name: TextVibe 120s One-Time Voice Test
+on:
+  push:
+    paths:
+      - '.github/workflows/textvibe_120s_test.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-special-video:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install video and voice dependencies
+        run: |
+          python -m pip install pillow==11.3.0 pydub==0.25.1 edge-tts==7.3.1 imageio-ffmpeg==0.6.0 numpy==2.2.6
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Render 120-second multi-voice test
+        env:
+          CHAT_LANG: en
+          CHAT_RENDER_FPS: "8"
+          CHAT_PROFILE_PHOTOS: "off"
+        run: |
+          export CHAT_JSON="$(cat chat_renderer/special_2026_11_03.json)"
+          python chat_renderer/render.py
+      - name: Verify duration, audio and message count
+        run: |
+          python - <<'PY'
+          import json,subprocess
+          p=subprocess.run(['ffprobe','-v','error','-show_entries','format=duration:stream=codec_type','-of','json','out/short.mp4'],capture_output=True,text=True,check=True)
+          data=json.loads(p.stdout)
+          duration=float(data['format']['duration'])
+          streamtypes=[s['codec_type'] for s in data['streams']]
+          assert 119.5<=duration<=120.5, f'Wrong duration: {duration}'
+          assert 'audio' in streamtypes and 'video' in streamtypes, streamtypes
+          print('PASS: 120-second voiced video rendered:',duration,'seconds',streamtypes)
+          PY
+      - name: Upload test MP4
+        uses: actions/upload-artifact@v4
+        with:
+          name: textvibe-special-120s-test
+          path: out/short.mp4
+          retention-days: 2
