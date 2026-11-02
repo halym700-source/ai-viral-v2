@@ -44,7 +44,7 @@ jobs:
                   items=api('playlistItems',part='contentDetails',playlistId=pid,maxResults=12).get('items',[])
                   details=video_details([x['contentDetails']['videoId'] for x in items])
                   for d in details:print('RESH_RECENT_PUBLIC',json.dumps(d,ensure_ascii=False),flush=True)
-          terms=['Ranking Funniest Monkey Moments','Ranking Funniest Dog Moments','Ranking Motorcycle Revs','Ranking Craziest BMX Tricks']
+          terms=['Ranking Funniest Dog Moments','Ranking Funny Cats','Ranking Motorcycle Exhaust Sounds','Ranking Motorcycle Revs','Ranking Funniest Animal Sounds']
           since=(datetime.datetime.now(datetime.timezone.utc)-datetime.timedelta(days=28)).strftime('%Y-%m-%dT%H:%M:%SZ')
           for term in terms:
               res=api('search',part='id,snippet',q=term,type='video',videoDuration='short',publishedAfter=since,order='viewCount',maxResults=12)
