@@ -40,24 +40,26 @@ if LANG not in ("en", "tr"):
     raise ValueError("CHAT_LANG must be en or tr")
 story = json.loads(os.environ["CHAT_JSON"])
 lines = story.get("dialogue", [])
-if not isinstance(lines, list) or not (9 <= len(lines) <= 16):
+SPECIAL_120 = story.get("special_120") is True
+if not isinstance(lines, list) or not ((len(lines) == 30) if SPECIAL_120 else (9 <= len(lines) <= 16)):
     raise ValueError("Expected 9 to 16 chat messages")
 allowed = {"me", "girlfriend", "boyfriend", "mother", "father", "grandpa",
            "grandma", "maternal_grandma", "paternal_grandma", "daughter", "son",
            "uncle", "aunt", "friend", "sister", "brother",
-           "older_brother", "younger_brother", "younger_sister"}
+           "older_brother", "younger_brother", "younger_sister", "planner"}
 for line in lines:
     if line.get("speaker") not in allowed:
         raise ValueError(f"Unrecognized speaker: {line.get('speaker')}")
     if not isinstance(line.get("text"), str) or not (1 <= len(line["text"]) <= 180):
         raise ValueError("Message text must be 1-180 characters")
-if len({m["speaker"] for m in lines}) > 3:
+if not SPECIAL_120 and len({m["speaker"] for m in lines}) > 3:
     raise ValueError("At most 3 voices per story")
 
 # Prefer neural voices marked for conversational reading, not news narration.
 # Natural pauses are handled in build_audio; no extreme pitch manipulation.
 EN_VOICES = {
     "me": ("en-US-AndrewNeural", "+0%", "+0Hz"),
+    "planner": ("en-US-GuyNeural", "+0%", "+0Hz"),
     "girlfriend": ("en-US-AvaNeural", "+0%", "+0Hz"),
     "boyfriend": ("en-US-BrianNeural", "+0%", "+0Hz"),
     "mother": ("en-US-EmmaNeural", "-2%", "+0Hz"),
@@ -79,6 +81,7 @@ EN_VOICES = {
 }
 TR_VOICES = {
     "me": ("tr-TR-AhmetNeural", "+0%", "+0Hz"),
+    "planner": ("tr-TR-AhmetNeural", "+0%", "+0Hz"),
     "girlfriend": ("tr-TR-EmelNeural", "+5%", "+8Hz"),
     "boyfriend": ("tr-TR-AhmetNeural", "-3%", "-3Hz"),
     "mother": ("tr-TR-EmelNeural", "-10%", "-8Hz"),
@@ -100,7 +103,7 @@ TR_VOICES = {
 }
 VOICES = EN_VOICES if LANG == "en" else TR_VOICES
 DISPLAY = {
-    "en": {"me": "You", "girlfriend": "Babe", "boyfriend": "Babe",
+    "en": {"planner": "Brad", "me": "You", "girlfriend": "Babe", "boyfriend": "Babe",
            "mother": "Mom", "father": "Dad", "grandpa": "Grandpa",
            "grandma": "Grandma", "maternal_grandma": "Grandma",
            "paternal_grandma": "Grandma", "daughter": "Daughter", "son": "Son",
@@ -108,7 +111,7 @@ DISPLAY = {
            "friend": "Bestie", "sister": "Little Sis", "brother": "Little Bro",
            "younger_sister": "Little Sis", "younger_brother": "Little Bro",
            "older_brother": "Big Bro"},
-    "tr": {"me": "Sen", "girlfriend": "Aşkım", "boyfriend": "Aşkım",
+    "tr": {"planner": "Brad", "me": "Sen", "girlfriend": "Aşkım", "boyfriend": "Aşkım",
            "mother": "Annem", "father": "Babam", "grandpa": "Dedem",
            "grandma": "Ninem", "maternal_grandma": "Anneannem",
            "paternal_grandma": "Babaannem", "daughter": "Kızım", "son": "Oğlum",
@@ -122,6 +125,7 @@ DISPLAY = {
 # Contacts are based on the ACTUAL speakers, not an AI-generated headline.
 # The same name is used in the fixed top bar and in the incoming bubbles.
 CONTACTS_EN = {
+    "planner": ("Brad", "Wedding planner"),
     "girlfriend": ("Sophie", "Girlfriend"),
     "boyfriend": ("Ryan", "Boyfriend"),
     "mother": ("Mom", "Mother"),
@@ -142,6 +146,7 @@ CONTACTS_EN = {
     "younger_sister": ("Mia", "Younger sister"),
 }
 CONTACTS_TR = {
+    "planner": ("Brad", "Wedding planner"),
     "girlfriend": ("Zeynep", "Sevgilin"),
     "boyfriend": ("Emir", "Sevgilin"),
     "mother": ("Annem", "Anne"),
@@ -187,6 +192,7 @@ if TTS_PROVIDER not in ("edge", "gemini"):
 
 GEMINI_VOICES = {
     "me": "Puck",
+    "planner": "Fenrir",
     "girlfriend": "Kore",
     "boyfriend": "Fenrir",
     "mother": "Kore",
@@ -560,6 +566,28 @@ def load_contact_portrait(role):
 # Pastel template draws its own consistent fictional portraits; no stock-photo network calls.
 PROFILE_PHOTO = None
 
+def build_special_audio(paths):
+    """Thirty synchronized 4-second message slots; output exactly 120s."""
+    master = AudioSegment.silent(duration=120000)
+    starts = []
+    for i, path in enumerate(paths):
+        audio = AudioSegment.from_file(str(path)).set_channels(1).set_frame_rate(44100)
+        # Reserve 0.15s breathing room per bubble.
+        if len(audio) > 3850:
+            speed = len(audio) / 3850.0
+            # FFmpeg atempo accepts 0.5-100 on current runner.
+            shorter = OUT / f"special_{i:03d}.wav"
+            subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-y",
+                            "-i",str(path),"-filter:a",f"atempo={speed:.6f}",
+                            str(shorter)], check=True)
+            audio = AudioSegment.from_file(str(shorter)).set_channels(1).set_frame_rate(44100)
+        audio = audio[:3850]
+        starts.append(i * 4.0)
+        master = master.overlay(audio, position=i * 4000)
+    wav = OUT / "audio.wav"
+    master.export(str(wav),format="wav")
+    return wav, starts, 120.0
+
 def build_audio(paths):
     master = AudioSegment.silent(duration=180)
     start_times = []
@@ -664,8 +692,11 @@ def fit_short_duration(wav, start_times, seconds, target_seconds=55.0):
 
 def main():
     paths = asyncio.run(synthesize())
-    wav, times, length = build_audio(paths)
-    wav, times, length = fit_short_duration(wav, times, length)
+    if SPECIAL_120:
+        wav, times, length = build_special_audio(paths)
+    else:
+        wav, times, length = build_audio(paths)
+        wav, times, length = fit_short_duration(wav, times, length)
     encode(wav, times, length)
 
 if __name__ == "__main__":
