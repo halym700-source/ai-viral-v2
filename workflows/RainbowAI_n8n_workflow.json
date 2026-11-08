@@ -84,6 +84,119 @@
         "binaryProperty": "data"
       },
       "typeVersion": 1
+    },
+    {
+      "id": "ra-flow-gate",
+      "name": "Flow API - requires paid access",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        240,
+        830
+      ],
+      "parameters": {},
+      "typeVersion": 1
+    },
+    {
+      "id": "ra-flow-start",
+      "name": "Flow Clip 1 - API request",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        470,
+        830
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.useapi.net/v1/google-flow/videos",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_IN_N8N_CREDENTIAL"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({prompt: $json.clip1Prompt, model: \"veo-3.1-lite\", aspectRatio: \"portrait\", duration: 8, async: true}) }}",
+        "options": {}
+      },
+      "typeVersion": 4.2
+    },
+    {
+      "id": "ra-flow-wait",
+      "name": "Wait for Clip 1",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        710,
+        830
+      ],
+      "parameters": {
+        "amount": 120,
+        "unit": "seconds"
+      },
+      "typeVersion": 1.1
+    },
+    {
+      "id": "ra-flow-status",
+      "name": "Get Clip 1 Job",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        940,
+        830
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.useapi.net/v1/google-flow/jobs/{{$json.jobid}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer REPLACE_IN_N8N_CREDENTIAL"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "typeVersion": 4.2
+    },
+    {
+      "id": "ra-flow-continuity",
+      "name": "Clip 2 - last frame required",
+      "type": "n8n-nodes-base.noOp",
+      "position": [
+        1170,
+        830
+      ],
+      "parameters": {},
+      "typeVersion": 1
+    },
+    {
+      "id": "ra-render",
+      "name": "20s render service - NOT CONFIGURED",
+      "type": "n8n-nodes-base.noOp",
+      "position": [
+        1400,
+        830
+      ],
+      "parameters": {},
+      "typeVersion": 1
+    },
+    {
+      "id": "ra-readme",
+      "name": "Production gate / instructions",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        230,
+        1050
+      ],
+      "parameters": {
+        "content": "## RainbowAI full automation integration (NOT LIVE)\nFlow video via useapi.net requires a third-party paid subscription and according to its n8n template a paid Google AI video plan. These API nodes are an integration scaffold only; they are not connected to the active schedule. Do not place tokens in GitHub or plaintext node fields: use n8n credentials. The first job must complete, download the MP4, extract its final frame, upload that image as clip 2 startImage, then submit and poll clip 2. Render both clips to 20s using an actual external rendering service (n8n Cloud does not run FFmpeg directly), then upload privately. The separate existing webhook accepts a FINISHED MP4. No automatic production is configured until these services are validated.",
+        "width": 790,
+        "height": 250
+      },
+      "typeVersion": 1
     }
   ],
   "connections": {
@@ -114,6 +227,61 @@
         [
           {
             "node": "YouTube Upload PRIVATE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flow API - requires paid access": {
+      "main": [
+        [
+          {
+            "node": "Flow Clip 1 - API request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flow Clip 1 - API request": {
+      "main": [
+        [
+          {
+            "node": "Wait for Clip 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Clip 1": {
+      "main": [
+        [
+          {
+            "node": "Get Clip 1 Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Clip 1 Job": {
+      "main": [
+        [
+          {
+            "node": "Clip 2 - last frame required",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clip 2 - last frame required": {
+      "main": [
+        [
+          {
+            "node": "20s render service - NOT CONFIGURED",
             "type": "main",
             "index": 0
           }
