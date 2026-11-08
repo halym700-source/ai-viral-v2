@@ -1,0 +1,131 @@
+{
+  "name": "RainbowAI - Flow Prompts + Private YouTube Upload (Starter)",
+  "nodes": [
+    {
+      "id": "ra-schedule",
+      "name": "Daily 2x",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        240,
+        200
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9,19 * * *"
+            }
+          ]
+        }
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "ra-prompts",
+      "name": "Generate Flow Prompts",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        480,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const ideas=[\"Cars & School Bus vs Chained Hydraulic Crushers\",\"Police Convoy vs Giant Swinging Hammer\",\"School Buses vs Giant Log Trap\",\"Ambulance Convoy vs Rising Pit Bollards\",\"Rainbow Buses vs Giant Water Pit\",\"Cargo Trucks vs Giant Hydraulic Press\",\"Supercars vs Giant Speed Bump\",\"Mixed Traffic vs Giant Wall Bollards\",\"Cement Trucks vs Low Steel Pipe\",\"Rainbow Vehicles vs Rolling Spike Roller\"];\nconst now=new Date();const slot=now.getUTCHours()<13?0:1;const idea=ideas[(Math.floor(now.getTime()/86400000)*2+slot)%ideas.length];const master=\"Raw PC video game screen capture, authentic BeamNG.drive-style gameplay, 9:16 vertical, fixed static high-angle centered camera. Straight gray two-lane country road with yellow dashed center line, grassy hills, pine trees, daylight, game-engine textures, infinite focus, no motion blur, no camera motion, no HUD, no text, no humans, no blood, no fire. Vehicles enter from the top of frame and travel toward an industrial obstacle in the lower-middle. Soft-body deformation and persistent wreckage.\";return [{json:{channel:\"RainbowAI\",idea,clip1Prompt:master+\" Scenario: \"+idea+\". First frame shows empty road, obstacle fully visible, first car far in distance. Over 8 seconds two brightly colored cars crash into the obstacle with realistic deformation and scattering debris.\",clip2Prompt:\"USE THE EXACT LAST FRAME OF CLIP 1 AS THE STARTING IMAGE. DO NOT CREATE A NEW SCENE. Same static camera, road, lighting, obstacle and exact wreckage positions. During 8 seconds a yellow school bus or large highlight vehicle crashes into the obstacle and previous wreckage, maximum realistic deformation, debris persists.\",productionNote:\"Generate two 8-second clips in Google Flow manually, using clip 1 final frame as clip 2 start. Assemble 20-second final MP4 externally, then POST multipart form-data field data to webhook.\",targetSeconds:20,visibility:\"private\",status:\"AWAITING_FLOW_CLIPS\"}}];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "ra-webhook",
+      "name": "Upload Ready Video Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        240,
+        520
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rainbowai-ready-video",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "ra-validate",
+      "name": "Validate MP4 Input",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        480,
+        520
+      ],
+      "parameters": {
+        "jsCode": "const item=$input.first();if(!item.binary?.data)throw new Error(\"Missing final MP4 binary in multipart field data\");const b=item.json.body||item.json;return [{json:{title:String(b.title||\"BeamNG-Style Crash Simulation | RainbowAI\").slice(0,100),description:String(b.description||\"AI-generated vehicle crash simulation. No real crashes. #VehiclePhysics #CrashSimulation\")},binary:{data:item.binary.data}}];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "ra-youtube",
+      "name": "YouTube Upload PRIVATE",
+      "type": "n8n-nodes-base.youTube",
+      "position": [
+        730,
+        520
+      ],
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{ $json.title }}",
+        "regionCode": "US",
+        "categoryId": "20",
+        "options": {
+          "description": "={{ $json.description }}",
+          "privacyStatus": "private"
+        },
+        "binaryProperty": "data"
+      },
+      "typeVersion": 1
+    }
+  ],
+  "connections": {
+    "Daily 2x": {
+      "main": [
+        [
+          {
+            "node": "Generate Flow Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Ready Video Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate MP4 Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate MP4 Input": {
+      "main": [
+        [
+          {
+            "node": "YouTube Upload PRIVATE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Istanbul"
+  },
+  "active": false,
+  "pinData": {},
+  "tags": []
+}
