@@ -37,7 +37,7 @@ jobs:
       - name: Install render dependencies
         run: |
           # Use a static FFmpeg for rendering, and install ffprobe for pydub media inspection.
-          python -m pip install --disable-pip-version-check pillow==11.3.0 pydub==0.25.1 edge-tts==7.3.1 imageio-ffmpeg==0.6.0 numpy==2.2.6
+          python -m pip install --disable-pip-version-check pillow==11.3.0 pydub==0.25.1 edge-tts==7.3.1 gTTS==2.5.4 imageio-ffmpeg==0.6.0 numpy==2.2.6
           if ! command -v ffprobe >/dev/null 2>&1; then
             echo "ffprobe missing; attempting bounded FFmpeg installation"
             # Try the existing package index first. Avoid an unbounded apt-get update.
@@ -60,6 +60,7 @@ jobs:
           CHAT_LANG: ${{ inputs.lang }}
           CHAT_JSON: ${{ inputs.dialogue_json }}
           CHAT_TTS_PROVIDER: ${{ vars.CHAT_TTS_PROVIDER || 'edge' }}
+          CHAT_GOOGLE_FALLBACK: '1'
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_TTS_MODEL: ${{ vars.GEMINI_TTS_MODEL || 'gemini-3.8-flash-tts' }}
         run: python chat_renderer/render.py
