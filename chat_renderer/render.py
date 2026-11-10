@@ -305,9 +305,22 @@ def gemini_voice_blocking(index, msg):
             raise RuntimeError(f"Gemini TTS network error at line {index}: {e}") from e
     raise RuntimeError("Gemini TTS failed")
 
+def google_voice_blocking(index, msg, output):
+    """Best-effort secondary speech backend (gTTS / Google Translate).
+
+    Only called if all configured Edge voices fail. This is an unofficial
+    backend: its availability, limits and licensing are not guaranteed.
+    """
+    from gtts import gTTS
+    gTTS(text=msg["text"], lang=LANG, slow=False, timeout=(8, 15)).save(str(output))
+    if not output.exists() or output.stat().st_size < 1000:
+        raise RuntimeError("Secondary TTS returned empty audio")
+    print(f"Secondary Google TTS used for line {index}")
+    return output
+
+
 async def generate_voice(index, msg):
-    # Local and CI visual test mode never calls paid/remote speech services.
-    # The production GitHub workflow does not set this variable.
+    # Offline CI visual tests must never access external speech services.
     if os.environ.get("CHAT_TEST_MODE", "0") == "1":
         output = TMP / f"{index:03d}.wav"
         duration = 600 + min(300, len(msg["text"]) * 5)
@@ -316,38 +329,75 @@ async def generate_voice(index, msg):
         test_tone.export(str(output), format="wav")
         return output
     if TTS_PROVIDER == "gemini":
-        # One request per message preserves exact visual/audio synchronization.
-        # It incurs API usage cost; do not enable without consent.
+        # One request per message preserves visual/audio synchronization.
         return await asyncio.to_thread(gemini_voice_blocking, index, msg)
 
     voice, rate, pitch = VOICES[msg["speaker"]]
     output = TMP / f"{index:03d}.mp3"
-    last_exc = None
-    for attempt in range(3):
+    female_roles = ("girlfriend", "mother", "grandma", "maternal_grandma",
+                    "paternal_grandma", "daughter", "aunt", "sister",
+                    "younger_sister")
+    female = msg["speaker"] in female_roles
+    alternate = (("en-US-AriaNeural" if female else "en-US-GuyNeural")
+                 if LANG == "en" else
+                 ("tr-TR-EmelNeural" if female else "tr-TR-AhmetNeural"))
+    # A second neural voice may succeed when the primary voice fails.
+    candidates = [(voice, 2)]
+    if alternate != voice:
+        candidates.append((alternate, 1))
+    errors = []
+    for candidate_voice, retry_count in candidates:
+        for attempt in range(retry_count):
+            try:
+                output.unlink(missing_ok=True)
+                await asyncio.wait_for(
+                    edge_tts.Communicate(
+                        msg["text"], voice=candidate_voice, rate=rate,
+                        pitch=pitch
+                    ).save(str(output)),
+                    timeout=35,
+                )
+                if not output.exists() or output.stat().st_size < 1000:
+                    raise RuntimeError("Speech provider returned empty audio")
+                if candidate_voice != voice:
+                    print(f"Edge alternate voice used for line {index}")
+                return output
+            except Exception as exc:
+                errors.append(f"edge {candidate_voice}: {type(exc).__name__}: {exc}")
+                if attempt + 1 < retry_count:
+                    await asyncio.sleep(float(os.environ.get(
+                        "CHAT_TTS_RETRY_DELAY_SEC", "2")) * (attempt + 1))
+
+    # Second provider is only used on failure, not on every message.
+    # It can sound different from character-specific neural voices.
+    if os.environ.get("CHAT_GOOGLE_FALLBACK", "1") == "1":
         try:
-            await edge_tts.Communicate(
-                msg["text"], voice=voice, rate=rate, pitch=pitch
-            ).save(str(output))
-            if output.stat().st_size < 1000:
-                raise RuntimeError("Audio returned empty")
-            return output
+            output.unlink(missing_ok=True)
+            return await asyncio.wait_for(
+                asyncio.to_thread(google_voice_blocking, index, msg, output),
+                timeout=40,
+            )
         except Exception as exc:
-            last_exc = exc
-            await asyncio.sleep((attempt + 1) * 3)
-    # Only in explicit private-preview mode: a local speech fallback prevents
-    # temporary Edge TTS outages from blocking the sample MP4. Never used in
-    # normal channel automation or public releases.
+            errors.append(f"google gTTS: {type(exc).__name__}: {exc}")
+
+    # Only private previews may use an obviously robotic offline fallback;
+    # production videos must not silently publish that voice.
     if os.environ.get("CHAT_PREVIEW_FALLBACK_TTS") == "1":
-        print(f"Preview voice fallback at line {index}: {last_exc}")
+        print(f"Preview-only offline voice fallback at line {index}: {errors}")
         wav_path = TMP / f"{index:03d}-backup.wav"
-        female = msg["speaker"] in ("girlfriend", "mother", "grandma", "maternal_grandma",
-                                    "paternal_grandma", "daughter", "aunt", "sister")
-        voice = "en-us+f3" if female else "en-us+m3"
-        subprocess.run(["espeak", "-v", voice, "-s", "163", "-w", str(wav_path),
-                        "--stdin"], input=msg["text"], text=True, check=True,
-                       stdout=subprocess.DEVNULL)
+        fallback_voice = "en-us+f3" if female else "en-us+m3"
+        subprocess.run(
+            ["espeak", "-v", fallback_voice, "-s", "163", "-w",
+             str(wav_path), "--stdin"],
+            input=msg["text"], text=True, check=True,
+            stdout=subprocess.DEVNULL,
+        )
         return wav_path
-    raise RuntimeError(f"TTS failed at line {index}: {last_exc}")
+    raise RuntimeError(
+        f"TTS failed at line {index} after Edge and secondary provider: "
+        + " | ".join(errors)
+    )
+
 
 async def synthesize():
     paths = []
