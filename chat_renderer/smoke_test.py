@@ -66,6 +66,45 @@ assert preview.getpixel((585, 1015)) != CREAM, "Bottom-right narrator is missing
 # After a message begins, its first bubble appears on the correct side.
 frame = render.draw_frame(1.5, [1.0])
 assert frame.getpixel((500, 318)) != CREAM, "First message bubble missing"
+# Exercise the production failure path without calling network TTS.
+# A failed Edge voice must transparently use the secondary backend.
+import asyncio
+primary_edge = render.edge_tts.Communicate
+primary_google = render.google_voice_blocking
+old_test_mode = os.environ.get("CHAT_TEST_MODE")
+old_retry_delay = os.environ.get("CHAT_TTS_RETRY_DELAY_SEC")
+os.environ["CHAT_TEST_MODE"] = "0"
+os.environ["CHAT_TTS_RETRY_DELAY_SEC"] = "0"
+os.environ["CHAT_GOOGLE_FALLBACK"] = "1"
+class _FailEdge:
+    def __init__(self, *args, **kwargs):
+        pass
+    async def save(self, filepath):
+        raise RuntimeError("mock no audio received")
+def _MockGoogle(index, msg, output):
+    output.write_bytes(b"FALLBACK-AUDIO" * 150)
+    return output
+try:
+    render.edge_tts.Communicate = _FailEdge
+    render.google_voice_blocking = _MockGoogle
+    recovered = asyncio.run(render.generate_voice(0, {
+        "speaker": "mother", "text": "A test sentence for voice recovery."
+    }))
+    assert recovered.exists() and recovered.stat().st_size > 1000, (
+        "Secondary TTS fallback failed"
+    )
+finally:
+    render.edge_tts.Communicate = primary_edge
+    render.google_voice_blocking = primary_google
+    if old_test_mode is None:
+        os.environ.pop("CHAT_TEST_MODE", None)
+    else:
+        os.environ["CHAT_TEST_MODE"] = old_test_mode
+    if old_retry_delay is None:
+        os.environ.pop("CHAT_TTS_RETRY_DELAY_SEC", None)
+    else:
+        os.environ["CHAT_TTS_RETRY_DELAY_SEC"] = old_retry_delay
+
 render.main()
 
 target = Path("out/short.mp4")
