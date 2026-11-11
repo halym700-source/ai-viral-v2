@@ -27,7 +27,7 @@ concurrency:
 
 jobs:
   render:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -36,20 +36,10 @@ jobs:
           python-version: '3.11'
       - name: Install render dependencies
         run: |
-          # Use a static FFmpeg for rendering, and install ffprobe for pydub media inspection.
+          # Use a bundled static FFmpeg for rendering and audio decoding.
           python -m pip install --disable-pip-version-check pillow==11.3.0 pydub==0.25.1 edge-tts==7.3.1 gTTS==2.5.4 imageio-ffmpeg==0.6.0 numpy==2.2.6
-          if ! command -v ffprobe >/dev/null 2>&1; then
-            echo "ffprobe missing; attempting bounded FFmpeg installation"
-            # Try the existing package index first. Avoid an unbounded apt-get update.
-            apt_options=(-o Acquire::Retries=1 -o Acquire::http::Timeout=15 -o Acquire::https::Timeout=15 -o DPkg::Lock::Timeout=30)
-            if ! timeout 90s sudo apt-get "${apt_options[@]}" install -y -qq ffmpeg; then
-              echo "::warning::FFmpeg installation failed; refreshing package index once"
-              timeout 60s sudo apt-get "${apt_options[@]}" update -qq
-              timeout 90s sudo apt-get "${apt_options[@]}" install -y -qq ffmpeg
-            fi
-          fi
-          command -v ffprobe
-          ffprobe -version | head -n 1
+          # The renderer decodes audio with the bundled static FFmpeg binary.
+          # Avoid apt-get / ffprobe: Ubuntu runner package mirrors can hang.
           mkdir -p "$RUNNER_TEMP/textvibe-bin"
           ln -sf "$(python -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')" "$RUNNER_TEMP/textvibe-bin/ffmpeg"
           echo "$RUNNER_TEMP/textvibe-bin" >> "$GITHUB_PATH"

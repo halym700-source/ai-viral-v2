@@ -27,6 +27,16 @@ from PIL import Image, ImageDraw, ImageFont, ImageOps
 from pydub import AudioSegment
 from pydub.generators import Sine
 
+def load_audio_without_ffprobe(path):
+    """Decode audio with the bundled FFmpeg executable; no OS ffprobe needed."""
+    proc = subprocess.run(
+        ["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error",
+         "-i", str(path), "-f", "wav", "-acodec", "pcm_s16le", "pipe:1"],
+        check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    return AudioSegment.from_wav(io.BytesIO(proc.stdout))
+
+
 W, H, FPS = 720, 1280, int(os.environ.get('CHAT_RENDER_FPS', '20'))
 if FPS < 4 or FPS > 30:
     raise ValueError('CHAT_RENDER_FPS must be between 4 and 30')
@@ -621,7 +631,7 @@ def build_special_audio(paths):
     master = AudioSegment.silent(duration=120000)
     starts = []
     for i, path in enumerate(paths):
-        audio = AudioSegment.from_file(str(path)).set_channels(1).set_frame_rate(44100)
+        audio = load_audio_without_ffprobe(str(path)).set_channels(1).set_frame_rate(44100)
         # Reserve 0.15s breathing room per bubble.
         if len(audio) > 3850:
             speed = len(audio) / 3850.0
@@ -630,7 +640,7 @@ def build_special_audio(paths):
             subprocess.run(["ffmpeg","-hide_banner","-loglevel","error","-y",
                             "-i",str(path),"-filter:a",f"atempo={speed:.6f}",
                             str(shorter)], check=True)
-            audio = AudioSegment.from_file(str(shorter)).set_channels(1).set_frame_rate(44100)
+            audio = load_audio_without_ffprobe(str(shorter)).set_channels(1).set_frame_rate(44100)
         audio = audio[:3850]
         starts.append(i * 4.0)
         master = master.overlay(audio, position=i * 4000)
@@ -642,7 +652,7 @@ def build_audio(paths):
     master = AudioSegment.silent(duration=180)
     start_times = []
     for path in paths:
-        sound = AudioSegment.from_file(str(path)).set_channels(1).set_frame_rate(44100)
+        sound = load_audio_without_ffprobe(str(path)).set_channels(1).set_frame_rate(44100)
         # Gently level very quiet/loud lines so different speakers feel
         # like participants in the same conversation without crushing dynamics.
         if sound.dBFS != float("-inf"):
@@ -730,7 +740,7 @@ def fit_short_duration(wav, start_times, seconds, target_seconds=55.0):
         "-i", str(wav), "-filter:a", f"atempo={speed:.6f}",
         str(faster_wav)
     ], check=True)
-    fitted_seconds = AudioSegment.from_file(str(faster_wav)).duration_seconds
+    fitted_seconds = load_audio_without_ffprobe(str(faster_wav)).duration_seconds
     factor = fitted_seconds / seconds
     fitted_starts = [round(start * factor, 5) for start in start_times]
     print(
