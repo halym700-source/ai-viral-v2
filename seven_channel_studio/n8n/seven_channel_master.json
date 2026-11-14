@@ -1,5 +1,5 @@
 {
-  "name": "Seven Channel Studio - MASTER (7 Independent Channels, One Test Switch)",
+  "name": "Seven Channel Studio MASTER - Gemini + Hybrid Free Render Dispatch",
   "nodes": [
     {
       "id": "trigger",
@@ -124,6 +124,43 @@
         "mode": "runOnceForAllItems",
         "jsCode": "const d=$input.first().json,p=d.package; return [{json:{status:\"PRODUCTION_PACKAGE_READY\",channel:d.channel_name,channel_id:d.channel_id,topic:d.topic,validation:d.validation,hook:p.hook,script:p.script,scenes:p.scenes,global_negative_prompt:p.global_negative_prompt,thumbnail_prompt:p.thumbnail_prompt,voice_handoff:{status:\"WAITING_FOR_TTS_CREDENTIAL\",text:p.script||\"\",voice_direction:p.narrator_notes||d.profile.voice,language:\"English\"},video_handoff:{status:\"WAITING_FOR_VIDEO_PROVIDER_CREDENTIAL\",format:\"9:16\",scenes:p.scenes},youtube_handoff:{status:\"WAITING_FOR_YOUTUBE_OAUTH\",title:p.youtube_title,description:p.youtube_description,tags:p.tags,visibility:\"private\"},fact_check_flags:p.fact_check_flags||[],safety:{test_mode:true,upload_enabled:false,automatic_publish:false,only_selected_channel:true}}}];"
       }
+    },
+    {
+      "id": "dispatch-render",
+      "name": "Dispatch Free Hybrid MP4 Render",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/repos/halym700-source/ai-viral-v2/actions/workflows/seven-channel-render.yml/dispatches",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.GITHUB_TOKEN }}"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ref:'main',inputs:{channel_id:$json.channel_id,package_json:JSON.stringify({hook:$json.hook,script:$json.script,scenes:$json.scenes,global_negative_prompt:$json.global_negative_prompt,thumbnail_prompt:$json.thumbnail_prompt,youtube_title:$json.youtube_handoff.title,youtube_description:$json.youtube_handoff.description,tags:$json.youtube_handoff.tags})}}) }}",
+        "options": {
+          "timeout": 30000
+        }
+      }
     }
   ],
   "connections": {
@@ -203,6 +240,20 @@
           }
         ]
       ]
+    },
+    "Prepare Voice, Video & YouTube Handoffs": {
+      "main": [
+        [
+          {
+            "node": "Dispatch Free Hybrid MP4 Render",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dispatch Free Hybrid MP4 Render": {
+      "main": []
     }
   },
   "active": false,
