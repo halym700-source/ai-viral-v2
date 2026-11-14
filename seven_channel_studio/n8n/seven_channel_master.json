@@ -37,7 +37,7 @@
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const d=$input.first().json; const enabled=[\"apex_reveal_studio\"]; if(!enabled.includes(d.channel_id)) throw new Error(\"Selected channel is not enabled.\"); return [{json:d}];"
+        "jsCode": "const d=$input.first().json; if(d.profile?.enabled!==true) throw new Error(\"This channel is disabled. Enable it in the channel configuration only after the Apex test passes.\"); return [{json:d}];"
       }
     },
     {
@@ -65,7 +65,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + $env.GEMINI_API_KEY }}",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -80,7 +80,9 @@
         "jsonBody": "={{ JSON.stringify({contents:[{parts:[{text:$json.geminiPrompt}]}],generationConfig:{temperature:0.8,responseMimeType:'application/json'}}) }}",
         "options": {
           "timeout": 120000
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth"
       }
     },
     {
@@ -145,10 +147,6 @@
               "value": "application/vnd.github+json"
             },
             {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.GITHUB_TOKEN }}"
-            },
-            {
               "name": "X-GitHub-Api-Version",
               "value": "2022-11-28"
             }
@@ -159,7 +157,9 @@
         "jsonBody": "={{ JSON.stringify({ref:'main',inputs:{channel_id:$json.channel_id,package_json:JSON.stringify({hook:$json.hook,script:$json.script,scenes:$json.scenes,global_negative_prompt:$json.global_negative_prompt,thumbnail_prompt:$json.thumbnail_prompt,youtube_title:$json.youtube_handoff.title,youtube_description:$json.youtube_handoff.description,tags:$json.youtube_handoff.tags})}}) }}",
         "options": {
           "timeout": 30000
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       }
     }
   ],
