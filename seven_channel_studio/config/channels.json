@@ -1,0 +1,147 @@
+{
+  "project": "Seven Channel Studio",
+  "language": "English",
+  "platform": "YouTube",
+  "channels": [
+    {
+      "id": "apex_reveal_studio",
+      "name": "Apex Reveal Studio",
+      "format": "Cinematic automotive reveals",
+      "duration_seconds": 25,
+      "voice": {
+        "style": "confident, deep, premium automotive documentary narrator",
+        "pace": "measured, dramatic"
+      },
+      "visual": "Photorealistic premium car cinematography, controlled studio or dramatic location lighting, precise camera movement, close-up details followed by a complete hero reveal.",
+      "structure": [
+        "0-2s visual hook",
+        "2-8s distinctive design details",
+        "8-18s performance or feature highlights",
+        "18-25s full hero reveal"
+      ],
+      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history."
+    },
+    {
+      "id": "brightboard_academy",
+      "name": "BrightBoard Academy",
+      "format": "Whiteboard educational explainers",
+      "duration_seconds": 35,
+      "voice": {
+        "style": "friendly, clear, curious English educator",
+        "pace": "brisk but easy to follow"
+      },
+      "visual": "Clean whiteboard animation, simple hand-drawn diagrams, consistent iconography, high contrast, one idea per visual beat.",
+      "structure": [
+        "Question hook",
+        "Explain the core idea in simple steps",
+        "One concrete example",
+        "Short memorable recap"
+      ],
+      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history."
+    },
+    {
+      "id": "creature_set_stories",
+      "name": "Creature Set Stories",
+      "format": "AI creature concepts and fictional behind-the-scenes VFX stories",
+      "duration_seconds": 30,
+      "voice": {
+        "style": "cinematic, curious creature-feature documentary narrator",
+        "pace": "dramatic with pauses"
+      },
+      "visual": "Original fictional creature design, believable anatomy and materials, practical-effects workshop atmosphere, production-process shots, no copyrighted characters or real-person likenesses.",
+      "structure": [
+        "Creature reveal hook",
+        "Creature design detail",
+        "Fictional set or VFX process",
+        "Final cinematic reveal"
+      ],
+      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history."
+    },
+    {
+      "id": "built_through_time",
+      "name": "Built Through Time",
+      "format": "Company, brand and technology history explainers",
+      "duration_seconds": 40,
+      "voice": {
+        "style": "authoritative, warm historical documentary narrator",
+        "pace": "steady"
+      },
+      "visual": "Period-appropriate archival-inspired imagery, dated milestones, product and technology evolution, restrained documentary motion graphics; distinguish verified facts from dramatization.",
+      "structure": [
+        "Surprising historical hook",
+        "Origin and early challenge",
+        "Key turning points",
+        "Present-day legacy"
+      ],
+      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history."
+    },
+    {
+      "id": "microdetail_garage",
+      "name": "MicroDetail Garage",
+      "format": "Miniature car cleaning and restoration ASMR",
+      "duration_seconds": 20,
+      "voice": {
+        "style": "no narration by default; optional minimal soft-spoken English intro only",
+        "pace": "slow"
+      },
+      "visual": "Macro miniature workshop, tiny scale cues, realistic water, foam, brushes and detailing tools, locked-off close-ups, satisfying cleaning progression; prioritize natural ASMR sound.",
+      "structure": [
+        "Immediate satisfying macro shot",
+        "Foam and detailing sequence",
+        "Rinse and reveal",
+        "Clean final miniature hero shot"
+      ],
+      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history."
+    },
+    {
+      "id": "twistframe_stories",
+      "name": "TwistFrame Stories",
+      "format": "2D stickman adventures with unexpected endings",
+      "duration_seconds": 35,
+      "voice": {
+        "style": "expressive, energetic English storyteller with distinct character delivery",
+        "pace": "quick, clear"
+      },
+      "visual": "Simple readable 2D stickman animation, consistent character design, uncluttered backgrounds, expressive poses, clear cause-and-effect staging.",
+      "structure": [
+        "Immediate conflict hook",
+        "Escalating choices",
+        "Near-resolution",
+        "Unexpected but logical twist"
+      ],
+      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history."
+    },
+    {
+      "id": "inside_the_line",
+      "name": "Inside the Line",
+      "format": "Factory and manufacturing documentaries",
+      "duration_seconds": 40,
+      "voice": {
+        "style": "calm, authoritative industrial documentary narrator",
+        "pace": "measured"
+      },
+      "visual": "Realistic industrial environments, sequential manufacturing stages, machines and materials shown accurately, safety-conscious framing, no invented claims about real facilities.",
+      "structure": [
+        "Finished product or process hook",
+        "Raw materials",
+        "Main production stages",
+        "Quality check and finished product"
+      ],
+      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history."
+    }
+  ],
+  "global_rules": {
+    "original_content_only": true,
+    "aspect_ratio": "9:16",
+    "captions": "Generate synchronized English captions when narration/dialogue exists; no captions for intentionally silent ASMR unless requested.",
+    "metadata": "Generate an accurate English title, description and topic-relevant tags.",
+    "publishing": "Never publish until the target channel OAuth connection is explicitly configured and verified.",
+    "no_cross_channel_content": true,
+    "claims": "Do not fabricate factual claims, historical dates, manufacturing details, or source citations."
+  },
+  "known_limitations": [
+    "The exact original master prompts were not retrievable from the available prior-chat records; channel briefs above are clearly labeled reconstructions.",
+    "This configuration does not itself generate video frames or provide a video-generation provider.",
+    "YouTube upload requires per-channel OAuth authorization and a tested upload step."
+  ]
+}
