@@ -1,0 +1,328 @@
+{
+  "name": "BrightBoard Academy - Independent Production Pipeline",
+  "nodes": [
+    {
+      "id": "manual-trigger",
+      "name": "Manual Test Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "input-topic",
+      "name": "Input - Topic & Settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Change only topic and optional language settings here for a test run.\nreturn [{json:{channel_id:\"brightboard_academy\",topic:\"\",language:\"English\",format:\"9:16 vertical\",duration:\"35-50 seconds\",test_mode:true}}];"
+      }
+    },
+    {
+      "id": "validate-input",
+      "name": "Validate Topic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d=$input.first().json;\nif(!d.topic || String(d.topic).trim().length<4) throw new Error(\"Add a specific topic in the Input - Topic & Settings node before running.\");\nif(d.channel_id!==\"brightboard_academy\") throw new Error(\"Channel isolation check failed.\");\nreturn [{json:{...d,topic:String(d.topic).trim()}}];"
+      }
+    },
+    {
+      "id": "channel-profile",
+      "name": "Load Independent Channel Profile",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d=$input.first().json;\nconst profile={\"id\":\"brightboard_academy\",\"name\":\"BrightBoard Academy\",\"active\":false,\"niche\":\"Short educational explainers presented as clean whiteboard animation\",\"style\":\"Minimal white background, hand-drawn black line illustrations, restrained accent colors, clear diagrams, readable labels, progressive visual explanation.\",\"structure\":\"Curiosity question, simple definition, three visual teaching beats, quick example, one-sentence recap.\",\"duration\":\"35-50 seconds\",\"narration\":\"Friendly clear English teacher voice; 90-115 words maximum.\",\"safety\":\"Use accurate, age-appropriate explanations. Flag uncertain facts for verification.\"};\nreturn [{json:{...d,profile}}];"
+      }
+    },
+    {
+      "id": "build-brief",
+      "name": "Build Creative Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d=$input.first().json; const p=d.profile;\nconst brief={channel:p.name,niche:p.niche,topic:d.topic,visual_style:p.style,story_structure:p.structure,duration:p.duration,narration_style:p.narration,safety_rules:p.safety,output_language:\"English\",aspect_ratio:\"9:16\",deliverables:[\"hook\",\"script\",\"scene_plan\",\"scene_prompts\",\"negative_prompt\",\"thumbnail_prompt\",\"title\",\"description\",\"tags\",\"fact_check_flags\"]};\nreturn [{json:{...d,brief,geminiPrompt:\"You are the dedicated creative producer for \"+p.name+\". Create an original short-form video package. Follow this brief exactly:\\\\n\"+JSON.stringify(brief)+\"\\\\nReturn ONLY valid JSON with keys: hook, script, estimated_duration_seconds, scenes (array of {scene_number, duration_seconds, visual_description, image_prompt, image_to_video_prompt, sound_design, on_screen_text}), global_negative_prompt, thumbnail_prompt, youtube_title, youtube_description, tags (array), fact_check_flags (array), narrator_notes. Keep all narration and metadata in English. Scene durations must add up to the target duration. Never fabricate factual claims; use VERIFY flags where needed. For MicroDetail Garage, narration should be empty and sound design should carry the video.\"}}];"
+      }
+    },
+    {
+      "id": "gemini-generate",
+      "name": "Gemini - Script & Scene Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + $env.GEMINI_API_KEY }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({contents:[{parts:[{text:$json.geminiPrompt}]}],generationConfig:{temperature:0.8,responseMimeType:'application/json'}}) }}",
+        "options": {
+          "timeout": 120000
+        }
+      }
+    },
+    {
+      "id": "parse-gemini",
+      "name": "Parse Gemini Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const r=$input.first().json; const parts=r.candidates?.[0]?.content?.parts||[]; const raw=parts.map(p=>p.text||\"\").join(\"\\\\n\").trim(); if(!raw) throw new Error(\"Gemini returned no text. Check GEMINI_API_KEY and model availability.\"); let out; try{out=JSON.parse(raw.replace(/^\\\\x60\\\\x60\\\\x60json\\\\s*/,\"\").replace(/\\\\x60\\\\x60\\\\x60$/,\"\"));}catch(e){throw new Error(\"Gemini response was not valid JSON: \"+e.message+\" | \"+raw.slice(0,500));} return [{json:{...$node[\"Build Creative Brief\"].json,package:out}}];"
+      }
+    },
+    {
+      "id": "validate-package",
+      "name": "Validate Script & Scene Package",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d=$input.first().json; const p=d.package; if(!p.script||!Array.isArray(p.scenes)||p.scenes.length<2) throw new Error(\"Package validation failed: script and at least two scenes are required.\"); const total=p.scenes.reduce((s,x)=>s+Number(x.duration_seconds||0),0); if(!Number.isFinite(total)||total<=0) throw new Error(\"Scene durations are missing or invalid.\"); const missing=p.scenes.filter(x=>!x.image_prompt||!x.image_to_video_prompt); if(missing.length) throw new Error(\"One or more scenes are missing image/video prompts.\"); return [{json:{...d,validation:{passed:true,scene_count:p.scenes.length,total_scene_seconds:total,duration_matches:Math.abs(total-Number(p.estimated_duration_seconds||total))<=3}}}];"
+      }
+    },
+    {
+      "id": "prepare-video-handoff",
+      "name": "Prepare Scene-by-Scene Video Handoff",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d=$input.first().json; const p=d.package; const scene_jobs=p.scenes.map(s=>({scene_number:s.scene_number,duration_seconds:s.duration_seconds,visual_description:s.visual_description,image_prompt:s.image_prompt,image_to_video_prompt:s.image_to_video_prompt,negative_prompt:p.global_negative_prompt,sound_design:s.sound_design,on_screen_text:s.on_screen_text})); return [{json:{...d,video_generation_handoff:{status:\"READY_FOR_VIDEO_PROVIDER_CONNECTION\",format:\"9:16\",scenes:scene_jobs,thumbnail_prompt:p.thumbnail_prompt}}}];"
+      }
+    },
+    {
+      "id": "prepare-voice-handoff",
+      "name": "Prepare Narrator / Voice Handoff",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d=$input.first().json; const narration=d.package.script||\"\"; return [{json:{...d,voice_handoff:{status:\"WAITING_FOR_VOICE_PROVIDER_CONNECTION\",narration_text:narration,voice_direction:d.package.narrator_notes||d.profile.narration,language:\"English\",note:\"No voice provider is called until its account/API credential is connected.\"}}}];"
+      }
+    },
+    {
+      "id": "prepare-youtube-handoff",
+      "name": "Prepare YouTube Account Handoff",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2200,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d=$input.first().json; return [{json:{...d,youtube_handoff:{status:\"WAITING_FOR_CHANNEL_OAUTH_CONNECTION\",channel_name:d.profile.name,title:d.package.youtube_title,description:d.package.youtube_description,tags:d.package.tags,visibility:\"private\",note:\"No upload is attempted. Connect and verify this channel's own YouTube OAuth credential before enabling upload.\"},workflow_safety:{test_mode:true,upload_enabled:false,channel_isolation:\"one workflow = one channel\"}}}];"
+      }
+    },
+    {
+      "id": "final-output",
+      "name": "Final Production Package",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d=$input.first().json; return [{json:{status:\"CONTENT_PACKAGE_READY\",channel:d.profile.name,channel_id:d.channel_id,topic:d.topic,validation:d.validation,hook:d.package.hook,script:d.package.script,scenes:d.video_generation_handoff.scenes,thumbnail_prompt:d.video_generation_handoff.thumbnail_prompt,youtube_metadata:d.youtube_handoff,voice_handoff:d.voice_handoff,fact_check_flags:d.package.fact_check_flags||[],next_connections:[\"VIDEO_PROVIDER\",\"VOICE_PROVIDER\",\"YOUTUBE_OAUTH\"],automatic_upload:false}}];"
+      }
+    }
+  ],
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Input - Topic & Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input - Topic & Settings": {
+      "main": [
+        [
+          {
+            "node": "Validate Topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Topic": {
+      "main": [
+        [
+          {
+            "node": "Load Independent Channel Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Independent Channel Profile": {
+      "main": [
+        [
+          {
+            "node": "Build Creative Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Creative Brief": {
+      "main": [
+        [
+          {
+            "node": "Gemini - Script & Scene Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - Script & Scene Plan": {
+      "main": [
+        [
+          {
+            "node": "Parse Gemini Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Gemini Output": {
+      "main": [
+        [
+          {
+            "node": "Validate Script & Scene Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Script & Scene Package": {
+      "main": [
+        [
+          {
+            "node": "Prepare Scene-by-Scene Video Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Scene-by-Scene Video Handoff": {
+      "main": [
+        [
+          {
+            "node": "Prepare Narrator / Voice Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Narrator / Voice Handoff": {
+      "main": [
+        [
+          {
+            "node": "Prepare YouTube Account Handoff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare YouTube Account Handoff": {
+      "main": [
+        [
+          {
+            "node": "Final Production Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  },
+  "pinData": {},
+  "versionId": "7c0e0000-0000-4000-8000-000000000001",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "description": "Independent workflow for BrightBoard Academy. Only Gemini content planning is connected; video, voice and YouTube credentials are intentionally unconnected."
+  },
+  "tags": [
+    {
+      "name": "Seven Channel Studio"
+    },
+    {
+      "name": "brightboard_academy"
+    }
+  ]
+}
