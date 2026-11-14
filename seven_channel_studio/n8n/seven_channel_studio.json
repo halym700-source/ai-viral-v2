@@ -1,0 +1,112 @@
+{
+  "name": "Seven Channel Studio - English Content Planner",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "seven-channel-studio",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "7c3fbe20-7df4-4fb8-8b12-01d6d18e4001",
+      "name": "01 Webhook - Choose Channel",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "webhookId": "7channelstudio"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allowed=[{\"id\":\"apex_reveal_studio\",\"name\":\"Apex Reveal Studio\",\"format\":\"Cinematic automotive reveals\",\"duration_seconds\":25,\"voice\":{\"style\":\"confident, deep, premium automotive documentary narrator\",\"pace\":\"measured, dramatic\"},\"visual\":\"Photorealistic premium car cinematography, controlled studio or dramatic location lighting, precise camera movement, close-up details followed by a complete hero reveal.\",\"structure\":[\"0-2s visual hook\",\"2-8s distinctive design details\",\"8-18s performance or feature highlights\",\"18-25s full hero reveal\"],\"master_prompt_status\":\"Reconstructed creative brief; original full prompt not present in retrievable history.\"},{\"id\":\"brightboard_academy\",\"name\":\"BrightBoard Academy\",\"format\":\"Whiteboard educational explainers\",\"duration_seconds\":35,\"voice\":{\"style\":\"friendly, clear, curious English educator\",\"pace\":\"brisk but easy to follow\"},\"visual\":\"Clean whiteboard animation, simple hand-drawn diagrams, consistent iconography, high contrast, one idea per visual beat.\",\"structure\":[\"Question hook\",\"Explain the core idea in simple steps\",\"One concrete example\",\"Short memorable recap\"],\"master_prompt_status\":\"Reconstructed creative brief; original full prompt not present in retrievable history.\"},{\"id\":\"creature_set_stories\",\"name\":\"Creature Set Stories\",\"format\":\"AI creature concepts and fictional behind-the-scenes VFX stories\",\"duration_seconds\":30,\"voice\":{\"style\":\"cinematic, curious creature-feature documentary narrator\",\"pace\":\"dramatic with pauses\"},\"visual\":\"Original fictional creature design, believable anatomy and materials, practical-effects workshop atmosphere, production-process shots, no copyrighted characters or real-person likenesses.\",\"structure\":[\"Creature reveal hook\",\"Creature design detail\",\"Fictional set or VFX process\",\"Final cinematic reveal\"],\"master_prompt_status\":\"Reconstructed creative brief; original full prompt not present in retrievable history.\"},{\"id\":\"built_through_time\",\"name\":\"Built Through Time\",\"format\":\"Company, brand and technology history explainers\",\"duration_seconds\":40,\"voice\":{\"style\":\"authoritative, warm historical documentary narrator\",\"pace\":\"steady\"},\"visual\":\"Period-appropriate archival-inspired imagery, dated milestones, product and technology evolution, restrained documentary motion graphics; distinguish verified facts from dramatization.\",\"structure\":[\"Surprising historical hook\",\"Origin and early challenge\",\"Key turning points\",\"Present-day legacy\"],\"master_prompt_status\":\"Reconstructed creative brief; original full prompt not present in retrievable history.\"},{\"id\":\"microdetail_garage\",\"name\":\"MicroDetail Garage\",\"format\":\"Miniature car cleaning and restoration ASMR\",\"duration_seconds\":20,\"voice\":{\"style\":\"no narration by default; optional minimal soft-spoken English intro only\",\"pace\":\"slow\"},\"visual\":\"Macro miniature workshop, tiny scale cues, realistic water, foam, brushes and detailing tools, locked-off close-ups, satisfying cleaning progression; prioritize natural ASMR sound.\",\"structure\":[\"Immediate satisfying macro shot\",\"Foam and detailing sequence\",\"Rinse and reveal\",\"Clean final miniature hero shot\"],\"master_prompt_status\":\"Reconstructed creative brief; original full prompt not present in retrievable history.\"},{\"id\":\"twistframe_stories\",\"name\":\"TwistFrame Stories\",\"format\":\"2D stickman adventures with unexpected endings\",\"duration_seconds\":35,\"voice\":{\"style\":\"expressive, energetic English storyteller with distinct character delivery\",\"pace\":\"quick, clear\"},\"visual\":\"Simple readable 2D stickman animation, consistent character design, uncluttered backgrounds, expressive poses, clear cause-and-effect staging.\",\"structure\":[\"Immediate conflict hook\",\"Escalating choices\",\"Near-resolution\",\"Unexpected but logical twist\"],\"master_prompt_status\":\"Reconstructed creative brief; original full prompt not present in retrievable history.\"},{\"id\":\"inside_the_line\",\"name\":\"Inside the Line\",\"format\":\"Factory and manufacturing documentaries\",\"duration_seconds\":40,\"voice\":{\"style\":\"calm, authoritative industrial documentary narrator\",\"pace\":\"measured\"},\"visual\":\"Realistic industrial environments, sequential manufacturing stages, machines and materials shown accurately, safety-conscious framing, no invented claims about real facilities.\",\"structure\":[\"Finished product or process hook\",\"Raw materials\",\"Main production stages\",\"Quality check and finished product\"],\"master_prompt_status\":\"Reconstructed creative brief; original full prompt not present in retrievable history.\"}];\nconst input=$input.first().json.body ?? $input.first().json;\nconst id=String(input.channel_id||'').trim();\nconst channel=allowed.find(c=>c.id===id);\nif(!channel) throw new Error('Unknown channel_id. Allowed: '+allowed.map(c=>c.id).join(', '));\nconst topic=String(input.topic||'').trim();\nif(!topic) throw new Error('POST body must include a non-empty topic.');\nconst prompt=`You are the English-language showrunner for ${channel.name}. Format: ${channel.format}. Duration target: ${channel.duration_seconds} seconds. Voice: ${channel.voice.style}; pace: ${channel.voice.pace}. Visual direction: ${channel.visual}. Story structure: ${channel.structure.join(' -> ')}. Topic: ${topic}. Create original YouTube content. Return ONLY valid JSON with keys: title (max 90 chars), description (2-4 accurate sentences), tags (array of 8-15 strings), narration (spoken English script), scene_plan (array of 4-8 objects with seconds, visual_prompt, narration_line), thumbnail_prompt, voice_direction. Keep scene_plan narration aligned to narration. For silent ASMR, narration must be empty and voice_direction must say no narration. Never invent factual claims; flag claims needing verification. No copyrighted characters, logos, or impersonations.`;\nreturn [{json:{channel,topic,prompt,language:'English',platform:'YouTube',status:'content_request_ready',note:'This workflow currently plans content only. Video generation, synchronized TTS, MP4 rendering and YouTube upload require separately configured production services.'}}];"
+      },
+      "id": "7c3fbe20-7df4-4fb8-8b12-01d6d18e4002",
+      "name": "02 Validate Channel + Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {contents:[{role:'user',parts:[{text:$json.prompt}]}],generationConfig:{responseMimeType:'application/json',temperature:0.7}} }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "7c3fbe20-7df4-4fb8-8b12-01d6d18e4003",
+      "name": "03 Gemini - English Script + Metadata",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw=$input.first().json?.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';\nif(!raw) throw new Error('Gemini returned no text. Check GEMINI_API_KEY and model access.');\nlet result; try { result=JSON.parse(raw.replace(/^```json\\s*/i,'').replace(/```$/,'').trim()); } catch(e) { throw new Error('Gemini output was not valid JSON: '+raw.slice(0,300)); }\nconst original=$('02 Validate Channel + Build Prompt').first().json;\nif(!result.title||!result.description||!Array.isArray(result.tags)||!Array.isArray(result.scene_plan)) throw new Error('Missing required metadata or scene_plan.');\nreturn [{json:{channel_id:original.channel.id,channel_name:original.channel.name,topic:original.topic,language:'English',...result,production_status:'PLANNED_NOT_RENDERED',required_next_steps:['Configure an image/video generation provider and map scene_plan.visual_prompt to it.','Generate voice audio with the channel voice_direction.','Create word-level or provider-timed English captions when narration exists.','Render MP4 and validate duration/aspect ratio/audio.','Connect the matching YouTube channel OAuth credential and upload only after a test.']}}];"
+      },
+      "id": "7c3fbe20-7df4-4fb8-8b12-01d6d18e4004",
+      "name": "04 Parse + Validate Content Package",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "01 Webhook - Choose Channel": {
+      "main": [
+        [
+          {
+            "node": "02 Validate Channel + Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "02 Validate Channel + Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "03 Gemini - English Script + Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "03 Gemini - English Script + Metadata": {
+      "main": [
+        [
+          {
+            "node": "04 Parse + Validate Content Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7c3fbe20-7df4-4fb8-8b12-01d6d18e4010",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
