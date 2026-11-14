@@ -19,7 +19,13 @@
         "8-18s performance or feature highlights",
         "18-25s full hero reveal"
       ],
-      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history."
+      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history.",
+      "visual_strategy": {
+        "preferred": "AI video clips for hero reveal and moving exterior shots",
+        "fallback_stock": "Pixabay automotive stock",
+        "fallback_animation": "FFmpeg cinematic motion graphics and text reveals",
+        "ai_generation_status": "Prompt preparation supported; automatic AI video generation requires a compatible free API or self-hosted GPU endpoint and is not bundled as an unlimited free service."
+      }
     },
     {
       "id": "brightboard_academy",
@@ -37,7 +43,13 @@
         "One concrete example",
         "Short memorable recap"
       ],
-      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history."
+      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history.",
+      "visual_strategy": {
+        "preferred": "Programmatic whiteboard/vector animation",
+        "fallback_stock": "Pixabay educational/science stock only when relevant",
+        "fallback_animation": "FFmpeg animated diagrams and kinetic typography",
+        "ai_generation_status": "Prompt preparation supported; automatic AI video generation requires a compatible free API or self-hosted GPU endpoint and is not bundled as an unlimited free service."
+      }
     },
     {
       "id": "creature_set_stories",
@@ -55,7 +67,13 @@
         "Fictional set or VFX process",
         "Final cinematic reveal"
       ],
-      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history."
+      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history.",
+      "visual_strategy": {
+        "preferred": "AI-generated original creature clips when a compatible free endpoint is configured",
+        "fallback_stock": "Pixabay atmospheric/texture stock, never presented as the actual creature",
+        "fallback_animation": "FFmpeg silhouette and illustrated reveal animation",
+        "ai_generation_status": "Prompt preparation supported; automatic AI video generation requires a compatible free API or self-hosted GPU endpoint and is not bundled as an unlimited free service."
+      }
     },
     {
       "id": "built_through_time",
@@ -73,7 +91,13 @@
         "Key turning points",
         "Present-day legacy"
       ],
-      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history."
+      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history.",
+      "visual_strategy": {
+        "preferred": "AI-generated illustrative period scenes when available; label dramatizations",
+        "fallback_stock": "Pixabay archival-style/topic-relevant stock",
+        "fallback_animation": "FFmpeg timelines, dates and product-era transitions",
+        "ai_generation_status": "Prompt preparation supported; automatic AI video generation requires a compatible free API or self-hosted GPU endpoint and is not bundled as an unlimited free service."
+      }
     },
     {
       "id": "microdetail_garage",
@@ -91,7 +115,13 @@
         "Rinse and reveal",
         "Clean final miniature hero shot"
       ],
-      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history."
+      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history.",
+      "visual_strategy": {
+        "preferred": "AI-generated macro miniature clips when available",
+        "fallback_stock": "Pixabay macro/detailing stock",
+        "fallback_animation": "FFmpeg close-up motion graphics; prioritize natural ASMR",
+        "ai_generation_status": "Prompt preparation supported; automatic AI video generation requires a compatible free API or self-hosted GPU endpoint and is not bundled as an unlimited free service."
+      }
     },
     {
       "id": "twistframe_stories",
@@ -109,7 +139,13 @@
         "Near-resolution",
         "Unexpected but logical twist"
       ],
-      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history."
+      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history.",
+      "visual_strategy": {
+        "preferred": "Programmatic 2D stickman animation as the primary source",
+        "fallback_stock": "No unrelated stock footage as story action",
+        "fallback_animation": "FFmpeg/vector character and prop animation",
+        "ai_generation_status": "Prompt preparation supported; automatic AI video generation requires a compatible free API or self-hosted GPU endpoint and is not bundled as an unlimited free service."
+      }
     },
     {
       "id": "inside_the_line",
@@ -127,7 +163,13 @@
         "Main production stages",
         "Quality check and finished product"
       ],
-      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history."
+      "master_prompt_status": "Reconstructed creative brief; original full prompt not present in retrievable history.",
+      "visual_strategy": {
+        "preferred": "AI-generated illustrative process clips when available and clearly identified as illustrative",
+        "fallback_stock": "Pixabay manufacturing footage",
+        "fallback_animation": "FFmpeg process diagrams and labeled stage transitions",
+        "ai_generation_status": "Prompt preparation supported; automatic AI video generation requires a compatible free API or self-hosted GPU endpoint and is not bundled as an unlimited free service."
+      }
     }
   ],
   "global_rules": {
