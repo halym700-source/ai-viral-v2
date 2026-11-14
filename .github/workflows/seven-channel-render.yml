@@ -1,0 +1,49 @@
+name: Seven Channel Studio - Hybrid Short Renderer
+on:
+  workflow_dispatch:
+    inputs:
+      channel_id:
+        description: "One channel ID"
+        required: true
+        type: choice
+        options:
+          - apex_reveal_studio
+          - brightboard_academy
+          - creature_set_stories
+          - built_through_time
+          - microdetail_garage
+          - twistframe_stories
+          - inside_the_line
+      package_json:
+        description: "Complete Gemini scene package JSON"
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install FFmpeg and TTS
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          pip install edge-tts
+      - name: Render vertical video
+        env:
+          CHANNEL_ID: ${{ inputs.channel_id }}
+          PACKAGE_JSON: ${{ inputs.package_json }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          TTS_VOICE: en-US-GuyNeural
+        run: python seven_channel_studio/render/render_short.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.channel_id }}-short
+          path: output/
+          retention-days: 7
