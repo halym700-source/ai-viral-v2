@@ -1,0 +1,227 @@
+{
+  "name": "Seven Channel Studio - MASTER (7 Independent Channels, One Test Switch)",
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Manual Test Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "selector",
+      "name": "SELECT CHANNEL - ONLY EDIT THIS NODE",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Select ONE channel and enter a topic. Only enabled channel can run.\nconst selected_channel_id = \"apex_reveal_studio\";\nconst topic = \"A futuristic electric grand tourer reveal\";\nconst channels = [{\"id\":\"apex_reveal_studio\",\"name\":\"Apex Reveal Studio\",\"enabled\":true,\"niche\":\"Premium cinematic automotive reveals and design showcases\",\"style\":\"Photorealistic premium automotive cinematography, dramatic reveal pacing, refined camera moves, realistic materials and reflections, no fake badges or invented manufacturer claims.\",\"structure\":\"Hook with a striking detail; reveal silhouette; exterior design sequence; interior or engineering detail; memorable final hero shot.\",\"duration\":\"30-45 seconds\",\"voice\":\"Concise energetic premium English narrator; 75-95 words maximum.\",\"safety\":\"Do not invent specifications, prices, range, horsepower, release dates or brand claims. Flag unknown facts as VERIFY.\"},{\"id\":\"brightboard_academy\",\"name\":\"BrightBoard Academy\",\"enabled\":false,\"niche\":\"Short educational explainers presented as clean whiteboard animation\",\"style\":\"Minimal white background, hand-drawn black line illustrations, restrained accent colors, clear diagrams, readable labels, progressive visual explanation.\",\"structure\":\"Curiosity question; simple definition; three visual teaching beats; quick example; one-sentence recap.\",\"duration\":\"35-50 seconds\",\"voice\":\"Friendly clear English teacher voice; 90-115 words maximum.\",\"safety\":\"Use accurate age-appropriate explanations. Flag uncertain facts for verification.\"},{\"id\":\"creature_set_stories\",\"name\":\"Creature Set Stories\",\"enabled\":false,\"niche\":\"Original creature concepts and fictional behind-the-scenes creature/VFX set stories\",\"style\":\"Cinematic creature design, practical-effects workshop atmosphere, texture close-ups, scale references, believable production details; clearly label fictional concepts as imagined.\",\"structure\":\"Creature hook; design reveal; three imagined build/effect details; creature in a scene; final reveal.\",\"duration\":\"30-45 seconds\",\"voice\":\"Wonder-filled documentary-style English narrator; 80-105 words maximum.\",\"safety\":\"Never claim fictional creature builds or productions are real. Label invented production stories as fictional.\"},{\"id\":\"built_through_time\",\"name\":\"Built Through Time\",\"enabled\":false,\"niche\":\"The history and evolution of companies, inventions, products and technologies\",\"style\":\"Premium historical mini-documentary; archival-inspired visuals, timeline transitions, period-appropriate environments, clear dates and milestones.\",\"structure\":\"Present-day hook; origin; key turning point; evolution through time; present-day impact.\",\"duration\":\"40-55 seconds\",\"voice\":\"Authoritative engaging English mini-documentary narrator; 100-130 words maximum.\",\"safety\":\"Do not fabricate dates, founders, milestones or statistics. Flag factual claims requiring source verification.\"},{\"id\":\"microdetail_garage\",\"name\":\"MicroDetail Garage\",\"enabled\":false,\"niche\":\"Miniature vehicle cleaning, restoration and detailing with satisfying ASMR\",\"style\":\"Photorealistic macro miniature workshop, tiny tools, realistic water/foam/dirt physics, locked clean compositions, tactile close-ups, satisfying transformations.\",\"structure\":\"Dirty miniature vehicle hook; foam and brush detail; rinse; precision drying/polish; pristine final reveal.\",\"duration\":\"20-35 seconds\",\"voice\":\"No spoken narration by default; prioritize natural ASMR sound. Optional one-line caption only.\",\"safety\":\"Keep miniature scale visually consistent. No impossible transformations or inconsistent prop sizes.\"},{\"id\":\"twistframe_stories\",\"name\":\"TwistFrame Stories\",\"enabled\":false,\"niche\":\"Original 2D stickman micro-stories with suspense, choices and unexpected endings\",\"style\":\"Simple expressive 2D stickman animation, clean backgrounds, consistent character design, readable staging, strong visual storytelling.\",\"structure\":\"Immediate problem; escalation in two beats; apparent solution; unexpected but logical twist; punchy ending.\",\"duration\":\"30-45 seconds\",\"voice\":\"Expressive conversational English storyteller; 80-110 words maximum.\",\"safety\":\"Stories must be original. Keep character appearance, props and spatial continuity consistent.\"},{\"id\":\"inside_the_line\",\"name\":\"Inside the Line\",\"enabled\":false,\"niche\":\"How everyday products are manufactured, assembled and quality-checked\",\"style\":\"High-quality industrial documentary visuals, macro machinery details, clean factory environments, process-focused camera work, realistic materials and safety practices.\",\"structure\":\"Finished product hook; raw materials; key production stages; quality control; finished product reveal.\",\"duration\":\"40-55 seconds\",\"voice\":\"Clear informative English documentary narrator; 100-130 words maximum.\",\"safety\":\"Do not invent factory procedures, temperatures, speeds, company names or machine specifications. Flag claims for verification.\"}];\nconst chosen = channels.find(c => c.id === selected_channel_id);\nif (!chosen) throw new Error(\"Unknown channel ID.\");\nif (!chosen.enabled) throw new Error(\"This channel is disabled. Enable it in the channel configuration only after the first test passes.\");\nif (!topic || topic.trim().length < 4) throw new Error(\"Enter a specific topic.\");\nreturn [{json:{channel_id:chosen.id,channel_name:chosen.name,topic:topic.trim(),profile:chosen,test_mode:true}}];"
+      }
+    },
+    {
+      "id": "channel-check",
+      "name": "Channel Isolation Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d=$input.first().json; const enabled=[\"apex_reveal_studio\"]; if(!enabled.includes(d.channel_id)) throw new Error(\"Selected channel is not enabled.\"); return [{json:d}];"
+      }
+    },
+    {
+      "id": "build-prompt",
+      "name": "Build Channel-Specific Production Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d=$input.first().json; const p=d.profile; const brief={channel:p.name,niche:p.niche,topic:d.topic,visual_style:p.style,story_structure:p.structure,target_duration:p.duration,narration_style:p.voice,safety_rules:p.safety,language:\"English\",aspect_ratio:\"9:16\",deliverables:[\"hook\",\"script\",\"estimated_duration_seconds\",\"scenes\",\"global_negative_prompt\",\"thumbnail_prompt\",\"youtube_title\",\"youtube_description\",\"tags\",\"fact_check_flags\",\"narrator_notes\"]}; const geminiPrompt=\"You are the dedicated creative producer for \"+p.name+\". Create an original short-form video production package following this brief exactly:\\\\n\"+JSON.stringify(brief)+\"\\\\nReturn ONLY valid JSON with keys: hook, script, estimated_duration_seconds, scenes (array of {scene_number,duration_seconds,visual_description,image_prompt,image_to_video_prompt,sound_design,on_screen_text}), global_negative_prompt, thumbnail_prompt, youtube_title, youtube_description, tags (array), fact_check_flags (array), narrator_notes. English only. Scene durations should add up to target duration. Do not invent factual claims; use VERIFY flags. For MicroDetail Garage, script must be empty and sound design must carry the video.\"; return [{json:{...d,geminiPrompt}}];"
+      }
+    },
+    {
+      "id": "gemini",
+      "name": "Gemini - Generate Script & Scene Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + $env.GEMINI_API_KEY }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({contents:[{parts:[{text:$json.geminiPrompt}]}],generationConfig:{temperature:0.8,responseMimeType:'application/json'}}) }}",
+        "options": {
+          "timeout": 120000
+        }
+      }
+    },
+    {
+      "id": "parse",
+      "name": "Parse Gemini JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1220,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d=$(\"Build Channel-Specific Production Prompt\").first().json; const r=$input.first().json; const raw=(r.candidates?.[0]?.content?.parts||[]).map(p=>p.text||\"\").join(\"\\\\n\").trim(); if(!raw) throw new Error(\"Gemini returned no text. Check GEMINI_API_KEY.\"); let out; try{out=JSON.parse(raw.replace(/^\\x60\\x60\\x60json\\s*/,\"\").replace(/\\x60\\x60\\x60$/,\"\"));}catch(e){throw new Error(\"Gemini returned invalid JSON: \"+e.message+\" | \"+raw.slice(0,400));} return [{json:{...d,package:out}}];"
+      }
+    },
+    {
+      "id": "validate",
+      "name": "Validate Production Package",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1480,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d=$input.first().json,p=d.package; if(!p.scenes||!Array.isArray(p.scenes)||p.scenes.length<2) throw new Error(\"At least two scenes are required.\"); const missing=p.scenes.filter(s=>!s.image_prompt||!s.image_to_video_prompt); if(missing.length) throw new Error(\"Scene image/video prompts are missing.\"); const total=p.scenes.reduce((a,s)=>a+Number(s.duration_seconds||0),0); return [{json:{...d,validation:{passed:true,scene_count:p.scenes.length,total_scene_seconds:total}}}];"
+      }
+    },
+    {
+      "id": "handoffs",
+      "name": "Prepare Voice, Video & YouTube Handoffs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1740,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const d=$input.first().json,p=d.package; return [{json:{status:\"PRODUCTION_PACKAGE_READY\",channel:d.channel_name,channel_id:d.channel_id,topic:d.topic,validation:d.validation,hook:p.hook,script:p.script,scenes:p.scenes,global_negative_prompt:p.global_negative_prompt,thumbnail_prompt:p.thumbnail_prompt,voice_handoff:{status:\"WAITING_FOR_TTS_CREDENTIAL\",text:p.script||\"\",voice_direction:p.narrator_notes||d.profile.voice,language:\"English\"},video_handoff:{status:\"WAITING_FOR_VIDEO_PROVIDER_CREDENTIAL\",format:\"9:16\",scenes:p.scenes},youtube_handoff:{status:\"WAITING_FOR_YOUTUBE_OAUTH\",title:p.youtube_title,description:p.youtube_description,tags:p.tags,visibility:\"private\"},fact_check_flags:p.fact_check_flags||[],safety:{test_mode:true,upload_enabled:false,automatic_publish:false,only_selected_channel:true}}}];"
+      }
+    }
+  ],
+  "connections": {
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "SELECT CHANNEL - ONLY EDIT THIS NODE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SELECT CHANNEL - ONLY EDIT THIS NODE": {
+      "main": [
+        [
+          {
+            "node": "Channel Isolation Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Channel Isolation Check": {
+      "main": [
+        [
+          {
+            "node": "Build Channel-Specific Production Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Channel-Specific Production Prompt": {
+      "main": [
+        [
+          {
+            "node": "Gemini - Generate Script & Scene Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - Generate Script & Scene Plan": {
+      "main": [
+        [
+          {
+            "node": "Parse Gemini JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Gemini JSON": {
+      "main": [
+        [
+          {
+            "node": "Validate Production Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Production Package": {
+      "main": [
+        [
+          {
+            "node": "Prepare Voice, Video & YouTube Handoffs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  },
+  "pinData": {},
+  "versionId": "7c0e0000-0000-4000-8000-000000000002",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "Seven Channel Studio"
+    },
+    {
+      "name": "Master Workflow"
+    }
+  ]
+}
