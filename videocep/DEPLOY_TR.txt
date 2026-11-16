@@ -1,0 +1,12 @@
+VIDEOCEP YAYIN ADIMLARI
+
+1) Netlify: videocep/site klasörünü https://app.netlify.com/drop adresine yükle.
+2) API: Bu depodaki videocep/api klasörünü Render'da Docker Web Service olarak yayınla.
+   Root Directory: videocep/api
+   Environment Variables:
+   VIDEOCEP_API_KEY = uzun, tahmin edilmesi zor bir anahtar
+   ALLOWED_ORIGINS = https://NETLIFY-SITE-ADRESIN.netlify.app
+3) Render servis URL'sini aç; / adresi status ok döndürmeli.
+4) VideoCep sayfasında API URL'sini ve API anahtarını gir.
+
+Bu servis sadece izinli indirme ve yeniden kullanım hakkına sahip olduğun içerikler için kullanılmalıdır. Platform erişim kuralları değişebilir; her URL/format garanti edilmez. Üretimde rate-limit, otomatik geçici dosya temizliği ve abuse monitoring ekleyin.
