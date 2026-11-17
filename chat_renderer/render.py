@@ -687,13 +687,12 @@ def bubble_size(draw, msg):
     rows = safe_wrap(draw, msg["text"], F["text"], CHAT_TEXT_WIDTH)
     return rows, 24 + len(rows) * CHAT_LINE_HEIGHT + 25
 
-from story_layout import render_frame as story_render_frame
+from reference_layout import render_frame as reference_render_frame
 
 def draw_frame(t, start_times):
-    """Render the new story-driven layout with an opening hook and dynamic theme."""
-    return story_render_frame(t, start_times, lines, CONTACT_NAME, PEER,
-                              globals().get("VIDEO_DURATION", 60), HOOK_TEXT,
-                              VISUAL_THEME, W, H)
+    """Reference-style cream conversation card with persistent main character."""
+    return reference_render_frame(t, start_times, lines, CONTACT_NAME, PEER,
+                                  globals().get("VIDEO_DURATION", 60), W, H)
 
 def encode(wav, starts, duration):
     global VIDEO_DURATION
