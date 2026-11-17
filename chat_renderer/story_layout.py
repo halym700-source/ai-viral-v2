@@ -1,5 +1,6 @@
 """Story-driven visual layout for TextVibeStories Shorts."""
 from PIL import Image, ImageDraw, ImageFont, ImageOps
+import numpy as np
 from reference_layout import portrait
 import hashlib
 
@@ -49,13 +50,14 @@ def render_frame(t, starts, lines, contact_name, peer, duration, hook_text="", t
         raise ValueError("Story layout is designed for 720x1280 Shorts")
     theme_name = pick_theme(theme, lines)
     c = THEMES[theme_name]
-    im = Image.new("RGB", (W, H), c["bg1"])
-    px = im.load()
-    for y in range(H):
-        f = y / max(1, H-1)
-        col = tuple(int(c["bg1"][i] * (1-f) + c["bg2"][i] * f) for i in range(3))
-        for x in range(W):
-            px[x, y] = col
+    # Build the vertical gradient in one vectorized operation. The previous
+    # per-pixel Python loop was too slow for a 20 FPS Shorts render.
+    blend = np.linspace(0.0, 1.0, H, dtype=np.float32)[:, None, None]
+    top = np.asarray(c["bg1"], dtype=np.float32)[None, None, :]
+    bottom = np.asarray(c["bg2"], dtype=np.float32)[None, None, :]
+    gradient = np.clip(top * (1.0 - blend) + bottom * blend, 0, 255)
+    gradient = np.broadcast_to(gradient, (H, W, 3)).astype(np.uint8)
+    im = Image.fromarray(gradient, mode="RGB")
     d = ImageDraw.Draw(im, "RGBA")
     # Abstract, story-specific energy shapes replace the old static wallpaper.
     d.ellipse((500, -170, 850, 180), fill=(*c["accent"], 35))
