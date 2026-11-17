@@ -51,6 +51,8 @@ if LANG not in ("en", "tr"):
 story = json.loads(os.environ["CHAT_JSON"])
 lines = story.get("dialogue", [])
 SPECIAL_120 = story.get("special_120") is True
+HOOK_TEXT = (story.get("on_screen_hook_text") or story.get("hook_text") or story.get("hook") or "").strip()
+VISUAL_THEME = story.get("visual_theme") or story.get("theme")
 if not isinstance(lines, list) or not ((len(lines) == 30) if SPECIAL_120 else (9 <= len(lines) <= 16)):
     raise ValueError("Expected 9 to 16 chat messages")
 allowed = {"me", "girlfriend", "boyfriend", "mother", "father", "grandpa",
@@ -685,12 +687,13 @@ def bubble_size(draw, msg):
     rows = safe_wrap(draw, msg["text"], F["text"], CHAT_TEXT_WIDTH)
     return rows, 24 + len(rows) * CHAT_LINE_HEIGHT + 25
 
-from reference_layout import render_frame as reference_render_frame
+from story_layout import render_frame as story_render_frame
 
 def draw_frame(t, start_times):
-    """Reference-style cream conversation card with persistent main character."""
-    return reference_render_frame(t, start_times, lines, CONTACT_NAME, PEER,
-                               globals().get("VIDEO_DURATION", 60), W, H)
+    """Render the new story-driven layout with an opening hook and dynamic theme."""
+    return story_render_frame(t, start_times, lines, CONTACT_NAME, PEER,
+                              globals().get("VIDEO_DURATION", 60), HOOK_TEXT,
+                              VISUAL_THEME, W, H)
 
 def encode(wav, starts, duration):
     global VIDEO_DURATION
