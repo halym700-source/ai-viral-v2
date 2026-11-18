@@ -73,29 +73,42 @@ def transcribe_local(video):
     print(f"Whisper language={getattr(info,'language','?')} segments={len(cues)}",flush=True); return cues
 
 def detect_webcam(video):
-    # Free local heuristic: detect a relatively small face in a corner/top region.
+    # Free local heuristic: find a small, persistent face likely belonging to a webcam overlay.
+    # Returns the best face box so the top panel can show the actual webcam area.
     try:
         import cv2
         cap=cv2.VideoCapture(str(video))
-        if not cap.isOpened(): return False
-        total=int(cap.get(cv2.CAP_PROP_FRAME_COUNT)); fps=cap.get(cv2.CAP_PROP_FPS) or 30
-        if total<=0:return False
+        if not cap.isOpened(): return None
+        total=int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        if total<=0:return None
         cascade=cv2.CascadeClassifier(cv2.data.haarcascades+"haarcascade_frontalface_default.xml")
-        hits=0; checked=0
+        samples=[]
         for frac in (0.15,0.35,0.55,0.75,0.9):
             cap.set(cv2.CAP_PROP_POS_FRAMES,int(total*frac)); ok,frame=cap.read()
-            if not ok:continue
-            gray=cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY); faces=cascade.detectMultiScale(gray,1.1,5,minSize=(40,40))
+            if not ok: continue
+            gray=cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+            faces=cascade.detectMultiScale(gray,1.1,5,minSize=(40,40))
             h,w=gray.shape
+            candidates=[]
             for x,y,fw,fh in faces:
                 area=(fw*fh)/(w*h)
-                if area<0.20 and (y<h*0.45 or x<w*0.45 or x+fw>w*0.55): hits+=1; break
-            checked+=1
+                if area < 0.20 and (y < h*0.50 or x < w*0.50 or x+fw > w*0.50):
+                    candidates.append((x,y,fw,fh))
+            if candidates:
+                candidates.sort(key=lambda box:min(box[0],box[1],w-(box[0]+box[2]),h-(box[1]+box[3])))
+                samples.append(candidates[0])
         cap.release()
-        result=checked>0 and hits>=2
-        print(f"Webcam heuristic: {hits}/{checked} -> {result}",flush=True); return result
+        if len(samples)<2:
+            print(f"Webcam heuristic: {len(samples)}/5 -> False",flush=True)
+            return None
+        x=sum(box[0] for box in samples)//len(samples); y=sum(box[1] for box in samples)//len(samples)
+        fw=sum(box[2] for box in samples)//len(samples); fh=sum(box[3] for box in samples)//len(samples)
+        box={"x":x,"y":y,"w":fw,"h":fh}
+        print(f"Webcam heuristic: {len(samples)}/5 -> {box}",flush=True)
+        return box
     except Exception as e:
-        print(f"Webcam detection skipped: {e}",flush=True); return False
+        print(f"Webcam detection skipped: {e}",flush=True)
+        return None
 
 def subtitle_style(name):
     styles={
@@ -109,13 +122,18 @@ def subtitle_style(name):
 def render_video(src,mp4,start,duration,srt,layout,substyle,webcam):
     st=srt.as_posix().replace("'", "\\'")
     sub=f"subtitles='{st}':force_style='{subtitle_style(substyle)}'"
-    # Webcam-top creates a 9:16 canvas: webcam occupies the upper 1/3,
-    # while the main video fills the lower 2/3. This is the same composition
-    # idea commonly used by short-form editors for screen+camera content.
     if layout=="webcam-top" or (layout=="auto" and webcam):
-        top="crop=iw:ih*0.33:0:0,scale=1080:640"
-        bottom="scale=1080:1280:force_original_aspect_ratio=increase,crop=1080:1280"
-        vf=f"[0:v]split=2[a][b];[a]{top}[a1];[b]{bottom}[b1];[a1][b1]vstack=inputs=2,{sub}"
+        # Top panel shows the detected webcam face; bottom panel keeps the main video.
+        if webcam:
+            x,y,w,h=webcam["x"],webcam["y"],webcam["w"],webcam["h"]
+            pad_x=max(w*2.2,120); pad_y=max(h*2.2,100)
+            left=max(0,int(x-pad_x)); top=max(0,int(y-pad_y))
+            cw=max(1,int(w+2*pad_x)); ch=max(1,int(h+2*pad_y))
+            top_filter=f"crop={cw}:{ch}:{left}:{top},scale=1080:640"
+        else:
+            top_filter="crop=iw:ih*0.33:0:0,scale=1080:640"
+        bottom_filter="scale=1080:1280:force_original_aspect_ratio=increase,crop=1080:1280"
+        vf=f"[0:v]split=2[a][b];[a]{top_filter}[a1];[b]{bottom_filter}[b1];[a1][b1]vstack=inputs=2,{sub}"
     else:
         vf=f"scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,{sub}"
     run(["ffmpeg","-y","-ss",str(start),"-i",str(src),"-t",str(duration),"-vf",vf,"-c:v","libx264","-preset","veryfast","-crf","23","-c:a","aac","-b:a","128k","-movflags","+faststart",str(mp4)])
@@ -152,8 +170,8 @@ def main():
     selected=clips(cues,max(1,a.count))
     if not selected: raise RuntimeError("No suitable clips found.")
 
-    webcam=detect_webcam(video) if a.layout=="auto" else (a.layout=="webcam-top")
-    manifest={"source":{"title":title,"url":a.url or "","file":video.name},"settings":{"layout":a.layout,"webcam_detected":webcam,"subtitle_style":a.subtitle_style},"clips":[]}
+    webcam=detect_webcam(video) if a.layout=="auto" else ({"x":0,"y":0,"w":1,"h":1} if a.layout=="webcam-top" else None)
+    manifest={"source":{"title":title,"url":a.url or "","file":video.name},"settings":{"layout":a.layout,"webcam_detected":bool(webcam),"webcam_box":webcam,"subtitle_style":a.subtitle_style},"clips":[]}
 
     for idx,c in enumerate(selected,1):
         stem=f"clip_{idx:02d}"; srt=OUT/(stem+".srt"); mp4=OUT/(stem+".mp4")
