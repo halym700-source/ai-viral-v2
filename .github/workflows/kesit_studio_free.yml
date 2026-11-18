@@ -12,6 +12,8 @@ on:
         required: true
         default: "5"
         type: string
+  issues:
+    types: [opened]
 
 permissions:
   contents: read
@@ -22,6 +24,7 @@ concurrency:
 
 jobs:
   render:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.issue.title, '[Kesit Studio]')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -37,8 +40,8 @@ jobs:
         uses: FedericoCarbonara/setup-ffmpeg@v3
       - name: Run free clip pipeline
         env:
-          YOUTUBE_URL: ${{ inputs.youtube_url }}
-          CLIP_COUNT: ${{ inputs.clip_count }}
+          YOUTUBE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.youtube_url || github.event.issue.body }}
+          CLIP_COUNT: ${{ github.event_name == 'workflow_dispatch' && inputs.clip_count || '3' }}
         run: python kesit_studio/free_pipeline.py --url "$YOUTUBE_URL" --count "$CLIP_COUNT"
       - name: Package ZIP
         run: |
