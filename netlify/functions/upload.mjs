@@ -95,6 +95,8 @@ export default async (req) => {
           source_url: job.youtubeUrl ? "" : sourceUrl,
           youtube_url: job.youtubeUrl || "",
           upload_id: id,
+          chunk_count: String(job.chunks),
+          filename: job.filename,
           clip_count: String(job.clipCount),
           layout: job.layout,
           subtitle_style: job.subtitleStyle
