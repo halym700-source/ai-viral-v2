@@ -39,7 +39,7 @@ jobs:
           python-version: "3.11"
       - name: Install video AI dependencies
         run: |
-          python -m pip install --disable-pip-version-check -U yt-dlp faster-whisper
+          python -m pip install --disable-pip-version-check -U yt-dlp faster-whisper opencv-python-headless
       - name: Install FFmpeg
         run: |
           sudo apt-get update
@@ -54,6 +54,8 @@ jobs:
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
             echo "YOUTUBE_URL=$DISPATCH_URL" >> "$GITHUB_ENV"
             echo "CLIP_COUNT=$DISPATCH_COUNT" >> "$GITHUB_ENV"
+            echo "LAYOUT=auto" >> "$GITHUB_ENV"
+            echo "SUBTITLE_STYLE=bold" >> "$GITHUB_ENV"
           elif [ "$EVENT_NAME" = "issues" ]; then
             # Prefer a GitHub user-attachment over any other URL in the issue.
             FILE_URL=$(printf "%s\n" "$ISSUE_BODY" | grep -Eo "https?://[^ )\n]*user-attachments/assets/[^ )\n]+" | head -n 1 || true)
@@ -75,6 +77,12 @@ jobs:
             COUNT=$(printf "%s\n" "$ISSUE_BODY" | grep -Eio "(clip count|clips?|kesit sayısı)[[:space:]]*:[[:space:]]*[0-9]+" | grep -Eo "[0-9]+" | head -n 1 || true)
             if [ -z "$COUNT" ]; then COUNT=3; fi
             echo "CLIP_COUNT=$COUNT" >> "$GITHUB_ENV"
+            LAYOUT=$(printf "%s\n" "$ISSUE_BODY" | grep -Eio "Layout:[[:space:]]*(auto|center|webcam-top)" | grep -Eio "(auto|center|webcam-top)" | head -n 1 || true)
+            SUBTITLE_STYLE=$(printf "%s\n" "$ISSUE_BODY" | grep -Eio "Subtitle style:[[:space:]]*(bold|classic|yellow|minimal)" | grep -Eio "(bold|classic|yellow|minimal)" | head -n 1 || true)
+            if [ -z "$LAYOUT" ]; then LAYOUT=auto; fi
+            if [ -z "$SUBTITLE_STYLE" ]; then SUBTITLE_STYLE=bold; fi
+            echo "LAYOUT=$LAYOUT" >> "$GITHUB_ENV"
+            echo "SUBTITLE_STYLE=$SUBTITLE_STYLE" >> "$GITHUB_ENV"
 
             echo "ISSUE_BODY<<EOF" >> "$GITHUB_ENV"
             echo "$ISSUE_BODY" >> "$GITHUB_ENV"
@@ -86,9 +94,9 @@ jobs:
       - name: Run free clip pipeline
         run: |
           if [ -n "${VIDEO_FILE:-}" ]; then
-            python kesit_studio/free_pipeline.py --file "$VIDEO_FILE" --count "$CLIP_COUNT"
+            python kesit_studio/free_pipeline.py --file "$VIDEO_FILE" --count "$CLIP_COUNT" --layout "$LAYOUT" --subtitle-style "$SUBTITLE_STYLE"
           else
-            python kesit_studio/free_pipeline.py --url "$YOUTUBE_URL" --count "$CLIP_COUNT"
+            python kesit_studio/free_pipeline.py --url "$YOUTUBE_URL" --count "$CLIP_COUNT" --layout "$LAYOUT" --subtitle-style "$SUBTITLE_STYLE"
           fi
       - name: Package ZIP
         run: |
