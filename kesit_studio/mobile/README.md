@@ -1,0 +1,1 @@
+Bu klasör GitHub Pages üzerinde iPhone uyumlu Kesit Studio giriş ekranıdır. YouTube linki için tek dokunuşla Issue oluşturur. Video dosyası için GitHub Issue'ya iPhone'dan ek yüklenebilir; workflow issue gövdesindeki URL/ekleri işleme alacak şekilde tasarlanmıştır.
