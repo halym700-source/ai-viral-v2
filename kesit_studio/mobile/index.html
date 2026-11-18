@@ -51,8 +51,10 @@ button{background:#2563eb;color:#fff;font-weight:800;margin-top:14px}
 </div>
 
 <div id="filePanel" class="source-panel">
-<p class="small">iPhone'daki videonu GitHub Issue ekranına ekle. Video yüklendikten sonra Issue'yu gönder; işlem otomatik başlayacak.</p>
-<button class="secondary" onclick="openIssue()">📱 Video Seç / Yükle</button>
+<label>Videonu seç</label>
+<input id="videoFile" type="file" accept="video/*">
+<p class="hint">Video doğrudan Netlify'a parçalar halinde yüklenir; GitHub Issue açman gerekmez.</p>
+<div id="uploadProgress" class="status"></div>
 </div>
 </div>
 
@@ -108,21 +110,62 @@ function settings(){
  '\nSubtitle style: '+document.getElementById('subtitle').value;
 }
 
-function start(){
+async function start(){
  if(source==='link'){
    const u=document.getElementById('url').value.trim();
    if(!u){alert('YouTube linki gir.');return;}
-   location.href='https://github.com/halym700-source/ai-viral-v2/issues/new?title=%5BKesit%20Studio%5D%20YouTube&body='+encodeURIComponent(u+settings());
+   setStatus('YouTube isteği başlatılıyor…');
+   try{
+     const r=await fetch('/.netlify/functions/upload?action=init',{
+       method:'POST',headers:{'content-type':'application/json'},
+       body:JSON.stringify({filename:'youtube.txt',size:0,chunks:0,clipCount:Number(document.getElementById('count').value),layout:document.getElementById('layout').value,subtitleStyle:document.getElementById('subtitle').value})
+     });
+     const j=await r.json();
+     if(!r.ok) throw new Error(j.error||'İstek başlatılamadı');
+     const run=await fetch('/.netlify/functions/upload?action=finish&id='+encodeURIComponent(j.uploadId),{method:'POST'});
+     if(!run.ok) throw new Error((await run.json()).error||'İşlem başlatılamadı');
+     setStatus('✅ İşlem başlatıldı. Sonuçlar sayfasından takip edebilirsin.');
+     setTimeout(()=>location.href='/results?refresh=1',700);
+   }catch(e){setStatus('❌ '+e.message);}
  }else{
-   openIssue();
+   await uploadVideo();
  }
 }
-
-function openIssue(){
- const body='VIDEO ATTACHMENT'+settings()+
- '\n\nVideoyu bu Issue alanına ekle. iPhone\'dan video/fotoğraf ekleme düğmesini kullan. Yükleme bittikten sonra Issue\'yu gönder.';
- location.href='https://github.com/halym700-source/ai-viral-v2/issues/new?title=%5BKesit%20Studio%5D%20Video%20Upload&body='+encodeURIComponent(body);
+function setStatus(msg){
+ const el=document.getElementById('uploadProgress'); if(el){el.style.display='block';el.textContent=msg;}
 }
+async function uploadVideo(){
+ const file=document.getElementById('videoFile').files[0];
+ if(!file){alert('Video seç.');return;}
+ const chunkSize=4*1024*1024;
+ const total=Math.ceil(file.size/chunkSize);
+ setStatus('Yükleme hazırlanıyor…');
+ try{
+   const init=await fetch('/.netlify/functions/upload?action=init',{
+     method:'POST',headers:{'content-type':'application/json'},
+     body:JSON.stringify({filename:file.name,size:file.size,chunks:total,clipCount:Number(document.getElementById('count').value),layout:document.getElementById('layout').value,subtitleStyle:document.getElementById('subtitle').value})
+   });
+   const ij=await init.json(); if(!init.ok) throw new Error(ij.error||'Yükleme başlatılamadı');
+   for(let i=0;i<total;i++){
+     const part=file.slice(i*chunkSize,Math.min(file.size,(i+1)*chunkSize));
+     let ok=false;
+     for(let attempt=1;attempt<=3&&!ok;attempt++){
+       const r=await fetch('/.netlify/functions/upload?action=chunk',{
+         method:'POST',headers:{'x-upload-id':ij.uploadId,'x-chunk-index':String(i)},body:part
+       });
+       ok=r.ok;
+       if(!ok && attempt===3) throw new Error('Parça '+(i+1)+' yüklenemedi');
+     }
+     setStatus('Yükleniyor: '+Math.round(((i+1)/total)*100)+'%');
+   }
+   setStatus('Video yüklendi. İşlem başlatılıyor…');
+   const fin=await fetch('/.netlify/functions/upload?action=finish&id='+encodeURIComponent(ij.uploadId),{method:'POST'});
+   const fj=await fin.json(); if(!fin.ok) throw new Error(fj.error||'İşlem başlatılamadı');
+   setStatus('✅ İşlem başladı. Sonuçlar sayfasına geçiliyor…');
+   setTimeout(()=>location.href='/results?id='+encodeURIComponent(ij.uploadId),700);
+ }catch(e){setStatus('❌ '+e.message);}
+}
+
 </script>
 </body>
 </html>
