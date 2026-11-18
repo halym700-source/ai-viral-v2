@@ -46,6 +46,7 @@ export default async (req) => {
       clipCount: Number(body.clipCount || 3),
       layout: ["auto", "center", "webcam-top"].includes(body.layout) ? body.layout : "auto",
       subtitleStyle: ["bold", "classic", "yellow", "minimal"].includes(body.subtitleStyle) ? body.subtitleStyle : "bold",
+      youtubeUrl: typeof body.youtubeUrl === "string" ? body.youtubeUrl.slice(0, 1000) : "",
       status: "uploading",
       createdAt: new Date().toISOString()
     };
@@ -91,7 +92,8 @@ export default async (req) => {
       body: JSON.stringify({
         ref: "main",
         inputs: {
-          source_url: sourceUrl,
+          source_url: job.youtubeUrl ? "" : sourceUrl,
+          youtube_url: job.youtubeUrl || "",
           upload_id: id,
           clip_count: String(job.clipCount),
           layout: job.layout,
