@@ -4,18 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       youtube_url:
-        description: "YouTube video URL"
-        required: true
+        description: "YouTube URL"
+        required: false
+        default: ""
         type: string
       clip_count:
         description: "Number of clips"
         required: true
         default: "5"
-        type: string
-      youtube_url:
-        description: "YouTube URL"
-        required: false
-        default: ""
         type: string
       layout:
         description: "Layout"
