@@ -118,7 +118,7 @@ async function start(){
    try{
      const r=await fetch('/.netlify/functions/upload?action=init',{
        method:'POST',headers:{'content-type':'application/json'},
-       body:JSON.stringify({filename:'youtube.txt',size:0,chunks:0,clipCount:Number(document.getElementById('count').value),layout:document.getElementById('layout').value,subtitleStyle:document.getElementById('subtitle').value})
+       body:JSON.stringify({filename:'youtube.txt',size:0,chunks:0,youtubeUrl:u,clipCount:Number(document.getElementById('count').value),layout:document.getElementById('layout').value,subtitleStyle:document.getElementById('subtitle').value})
      });
      const j=await r.json();
      if(!r.ok) throw new Error(j.error||'İstek başlatılamadı');
