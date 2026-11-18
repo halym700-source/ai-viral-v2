@@ -1,0 +1,15 @@
+[build]
+  publish = "kesit_studio/mobile"
+
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from = "/"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/results"
+  to = "/results.html"
+  status = 200
