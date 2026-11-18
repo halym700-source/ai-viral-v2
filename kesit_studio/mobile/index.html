@@ -1,11 +1,79 @@
 <!doctype html>
-<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#111827"><title>Kesit Studio</title>
-<style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#0f172a;color:#fff;margin:0;padding:24px}main{max-width:560px;margin:auto}h1{font-size:30px}p{color:#cbd5e1}.card{background:#1e293b;border-radius:18px;padding:18px;margin:16px 0}input,button{width:100%;box-sizing:border-box;padding:15px;border-radius:12px;border:0;margin-top:10px;font-size:16px}input{background:#fff;color:#111}button{background:#2563eb;color:#fff;font-weight:700}.secondary{background:#334155}.small{font-size:13px}.ok{color:#86efac}.warn{color:#fde68a}</style></head>
-<body><main><h1>🎬 Kesit Studio</h1><p>iPhone'dan YouTube linkini gönder veya videonu yükleyerek kesit üret.</p>
-<div class="card"><h2>🔗 YouTube / Canlı yayın</h2><input id="url" type="url" placeholder="YouTube linkini yapıştır"><input id="count" type="number" min="1" max="10" value="3"><button onclick="startLink()">Kesitleri Başlat</button></div>
-<div class="card"><h2>📱 iPhone'dan video</h2><p class="small">Videoyu doğrudan GitHub'a göndermek yerine güvenli biçimde işlemciye aktaracak bir yükleme servisi gerekir. Bu ücretsiz sürümde video yükleme için GitHub Issue eki kullanılabilir.</p><button class="secondary" onclick="openIssue()">Video yükleme ekranını aç</button></div>
-<div class="card"><p class="small">Ücretsiz GitHub Actions üzerinde çalışır. Ücretli Claude/OpenAI API kullanılmaz. YouTube altyazısı yoksa yerel Whisper kullanılır.</p></div>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#09090b">
+<title>Kesit Studio</title>
+<style>
+*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#09090b;color:#fff;margin:0;padding:18px}
+main{max-width:620px;margin:auto}.hero{padding:10px 4px 20px}h1{font-size:34px;margin:0 0 8px}p{color:#a1a1aa;line-height:1.45}.card{background:#18181b;border:1px solid #27272a;border-radius:20px;padding:18px;margin:14px 0}label{display:block;font-size:14px;color:#d4d4d8;margin:14px 0 6px}input,select,button{width:100%;padding:15px;border-radius:13px;border:0;font-size:16px}input,select{background:#fff;color:#111}button{background:#2563eb;color:#fff;font-weight:800;margin-top:14px}.secondary{background:#27272a}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.small{font-size:13px}.hint{font-size:12px;color:#71717a}.pill{display:inline-block;background:#27272a;border-radius:999px;padding:6px 10px;font-size:12px;margin:3px}
+</style>
+</head>
+<body>
+<main>
+<section class="hero"><h1>🎬 Kesit Studio</h1><p>iPhone'dan link veya video gönder. Kesitleri, 9:16 formatını, webcam düzenini ve altyazı stilini seç.</p></section>
+
+<div class="card">
+<h2>1️⃣ Kaynak</h2>
+<label>YouTube / canlı yayın linki</label>
+<input id="url" type="url" placeholder="https://youtube.com/...">
+<label>Kesit sayısı</label>
+<input id="count" type="number" min="1" max="10" value="3">
+<button onclick="startLink()">🔗 Linkten Kesit Oluştur</button>
+</div>
+
+<div class="card">
+<h2>2️⃣ Video yükle</h2>
+<p class="small">iPhone'dan videoyu GitHub Issue'ya ekleyip gönder. İşlem otomatik başlayacak.</p>
+<button class="secondary" onclick="openIssue()">📱 Video Seç / Yükle</button>
+</div>
+
+<div class="card">
+<h2>3️⃣ Video düzeni</h2>
+<label>Webcam / ekran düzeni</label>
+<select id="layout">
+<option value="auto">Otomatik (önerilen)</option>
+<option value="center">Sadece 9:16 merkez kırpma</option>
+<option value="webcam-top">Webcam üstte — ekranın 1/3'ü</option>
+</select>
+<p class="hint">Otomatik modda yüz/webcam ipuçları aranır; webcam düzeni uygunsa üst 1/3'e alınır.</p>
+
+<label>Altyazı stili</label>
+<select id="subtitle">
+<option value="bold">🔥 Bold — beyaz / kalın</option>
+<option value="classic">Klasik — beyaz</option>
+<option value="yellow">🟡 Sarı vurgu</option>
+<option value="minimal">Minimal — küçük</option>
+</select>
+
+<button onclick="startLink()">▶️ Seçimleri Uygula ve Başlat</button>
+</div>
+
+<div class="card">
+<p class="small"><span class="pill">Ücretsiz</span><span class="pill">Whisper</span><span class="pill">FFmpeg</span><span class="pill">GitHub Actions</span></p>
+<p class="small">Claude/OpenAI API zorunlu değil. YouTube altyazısı yoksa yerel Whisper kullanılır.</p>
+</div>
+
 <script>
-function startLink(){const u=document.getElementById('url').value.trim(),n=document.getElementById('count').value;if(!u)return alert('YouTube linki gir.');location.href='https://github.com/halym700-source/ai-viral-v2/issues/new?title=%5BKesit%20Studio%5D%20YouTube&body='+encodeURIComponent(u+'\n'+n);}
-function openIssue(){location.href='https://github.com/halym700-source/ai-viral-v2/issues/new?title=%5BKesit%20Studio%5D%20Video%20Upload&body='+encodeURIComponent('Videoyu bu Issue alanına ekle. iPhone\'dan video/fotoğraf ekleme düğmesini kullan, yükleme bittikten sonra Issue\'yu gönder.');}
-</script></main></body></html>
+function buildBody(source){
+ const u=document.getElementById('url').value.trim();
+ const n=document.getElementById('count').value;
+ const layout=document.getElementById('layout').value;
+ const subtitle=document.getElementById('subtitle').value;
+ return source+'\n\nClip count: '+n+'\nLayout: '+layout+'\nSubtitle style: '+subtitle;
+}
+function startLink(){
+ const u=document.getElementById('url').value.trim();
+ if(!u)return alert('YouTube linki gir.');
+ const body=buildBody(u);
+ location.href='https://github.com/halym700-source/ai-viral-v2/issues/new?title=%5BKesit%20Studio%5D%20YouTube&body='+encodeURIComponent(body);
+}
+function openIssue(){
+ const body=buildBody('VIDEO ATTACHMENT');
+ location.href='https://github.com/halym700-source/ai-viral-v2/issues/new?title=%5BKesit%20Studio%5D%20Video%20Upload&body='+encodeURIComponent(body+'\n\nVideoyu bu Issue alanına ekle. iPhone\'dan video/fotoğraf ekleme düğmesini kullan, yükleme bittikten sonra Issue\'yu gönder.');
+}
+</script>
+</main>
+</body>
+</html>
