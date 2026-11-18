@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#09090b">
+<title>Kesit Studio — Sonuçlar</title>
+<style>
+*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#09090b;color:#fff;margin:0;padding:18px}
+main{max-width:620px;margin:auto}.hero{padding:12px 4px 18px}h1{font-size:30px;margin:0 0 8px}p{color:#a1a1aa;line-height:1.45}
+.card{background:#18181b;border:1px solid #27272a;border-radius:22px;padding:18px;margin:14px 0}
+button,a{display:block;width:100%;padding:15px;border-radius:14px;border:0;font-size:16px;text-align:center;text-decoration:none}
+button{background:#2563eb;color:#fff;font-weight:800}.item{border:1px solid #27272a;border-radius:14px;padding:14px;margin:10px 0}.item a{background:#27272a;color:#fff;margin-top:8px}
+.status{padding:12px;border-radius:12px;background:#27272a;color:#d4d4d8;font-size:13px}
+.small{font-size:13px}.muted{color:#71717a}
+</style>
+</head>
+<body>
+<main>
+<section class="hero">
+<h1>🎬 Kesit Studio</h1>
+<p>Oluşturulan son GitHub Actions işlemlerini buradan takip edebilirsin.</p>
+</section>
+<div class="card">
+<div id="status" class="status">Son işlemler kontrol ediliyor…</div>
+<div id="list"></div>
+<button onclick="loadRuns()">🔄 Yenile</button>
+</div>
+<div class="card">
+<p class="small">GitHub Actions çıktıları artifact olarak saklanabilir ve GitHub'ın artifact API'si üzerinden listelenip indirilebilir.</p>
+</div>
+</main>
+<script>
+const OWNER='halym700-source', REPO='ai-viral-v2';
+async function loadRuns(){
+ const status=document.getElementById('status'), list=document.getElementById('list');
+ status.textContent='İşlemler kontrol ediliyor…'; list.innerHTML='';
+ try{
+   const r=await fetch('https://api.github.com/repos/'+OWNER+'/'+REPO+'/actions/runs?per_page=20');
+   if(!r.ok) throw new Error('GitHub API '+r.status);
+   const data=await r.json();
+   const runs=(data.workflow_runs||[]).filter(x=>(x.name||'').toLowerCase().includes('kesit'));
+   if(!runs.length){status.textContent='Henüz Kesit Studio işlemi bulunamadı.';return;}
+   status.textContent='Son Kesit Studio işlemleri:';
+   runs.slice(0,5).forEach(run=>{
+     const div=document.createElement('div');div.className='item';
+     const conclusion=run.status==='completed'?(run.conclusion||'completed'):run.status;
+     div.innerHTML='<strong>'+escapeHtml(run.name)+'</strong><p class="small">'+escapeHtml(conclusion)+' · '+new Date(run.created_at).toLocaleString('tr-TR')+'</p><a href="'+run.html_url+'" target="_blank" rel="noopener">GitHub işlem sayfasını aç</a>';
+     list.appendChild(div);
+   });
+ }catch(e){status.textContent='Sonuçlar alınamadı: '+e.message;}
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+loadRuns();
+</script>
+</body>
+</html>
