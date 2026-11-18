@@ -57,7 +57,7 @@ jobs:
             echo "YOUTUBE_URL=$ISSUE_URL" >> "$GITHUB_ENV"
             echo "CLIP_COUNT=3" >> "$GITHUB_ENV"
           else
-            echo "YOUTUBE_URL=$(cat kesit_studio/requests/latest.txt)" >> "$GITHUB_ENV"
+            echo "YOUTUBE_URL=$(head -n 1 kesit_studio/requests/latest.txt)" >> "$GITHUB_ENV"
             echo "CLIP_COUNT=3" >> "$GITHUB_ENV"
           fi
       - name: Run free clip pipeline
