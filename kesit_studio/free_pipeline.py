@@ -147,7 +147,7 @@ def main():
     if not cues: raise RuntimeError("No speech/subtitles were detected.")
     selected=clips(cues,a.count)
     if not selected: raise RuntimeError("No suitable clips were found.")
-    manifest={"source":{"title":title,"url":a.url},"clips":[]}
+    manifest={"source":{"title":title,"url":a.url or "", "file":str(video.name) if a.file else ""},"clips":[]}
     for idx,c in enumerate(selected,1):
         stem=f"clip_{idx:02d}"; srt=OUT/(stem+".srt"); mp4=OUT/(stem+".mp4")
         local=[{"start":max(0,x["start"]-c["start"]),"end":min(c["end"],x["end"])-c["start"],"text":x["text"]}
