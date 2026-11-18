@@ -6,38 +6,68 @@
 <meta name="theme-color" content="#09090b">
 <title>Kesit Studio</title>
 <style>
-*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#09090b;color:#fff;margin:0;padding:18px}
-main{max-width:620px;margin:auto}.hero{padding:10px 4px 20px}h1{font-size:34px;margin:0 0 8px}p{color:#a1a1aa;line-height:1.45}.card{background:#18181b;border:1px solid #27272a;border-radius:20px;padding:18px;margin:14px 0}label{display:block;font-size:14px;color:#d4d4d8;margin:14px 0 6px}input,select,button{width:100%;padding:15px;border-radius:13px;border:0;font-size:16px}input,select{background:#fff;color:#111}button{background:#2563eb;color:#fff;font-weight:800;margin-top:14px}.secondary{background:#27272a}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.small{font-size:13px}.hint{font-size:12px;color:#71717a}.pill{display:inline-block;background:#27272a;border-radius:999px;padding:6px 10px;font-size:12px;margin:3px}
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#09090b;color:#fff;margin:0;padding:18px}
+main{max-width:620px;margin:auto}
+.hero{padding:12px 4px 18px}
+h1{font-size:34px;margin:0 0 8px;letter-spacing:-.5px}
+p{color:#a1a1aa;line-height:1.45}
+.card{background:#18181b;border:1px solid #27272a;border-radius:22px;padding:18px;margin:14px 0}
+label{display:block;font-size:14px;color:#d4d4d8;margin:14px 0 6px}
+input,select,button{width:100%;padding:15px;border-radius:14px;border:0;font-size:16px}
+input,select{background:#fff;color:#111}
+button{background:#2563eb;color:#fff;font-weight:800;margin-top:14px}
+.secondary{background:#27272a}
+.primary{background:linear-gradient(135deg,#2563eb,#7c3aed);font-size:18px;padding:17px}
+.source{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.source button{margin:0;background:#27272a}
+.source button.active{background:#2563eb}
+.source-panel{display:none}
+.source-panel.active{display:block}
+.small{font-size:13px}
+.hint{font-size:12px;color:#71717a}
+.pill{display:inline-block;background:#27272a;border-radius:999px;padding:6px 10px;font-size:12px;margin:3px}
+.status{display:none;margin-top:12px;padding:12px;border-radius:12px;background:#27272a;color:#d4d4d8;font-size:13px}
 </style>
 </head>
 <body>
 <main>
-<section class="hero"><h1>🎬 Kesit Studio</h1><p>iPhone'dan link veya video gönder. Kesitleri, 9:16 formatını, webcam düzenini ve altyazı stilini seç.</p></section>
+<section class="hero">
+<h1>🎬 Kesit Studio</h1>
+<p>Tek ekrandan video veya YouTube linkini gönder. Kesit sayısını, webcam düzenini ve altyazı stilini seç.</p>
+</section>
 
 <div class="card">
-<h2>1️⃣ Kaynak</h2>
+<h2>1️⃣ Videonu seç</h2>
+<div class="source">
+<button id="linkTab" class="active" onclick="setSource('link')">🔗 YouTube</button>
+<button id="fileTab" onclick="setSource('file')">📱 Video Yükle</button>
+</div>
+
+<div id="linkPanel" class="source-panel active">
 <label>YouTube / canlı yayın linki</label>
 <input id="url" type="url" placeholder="https://youtube.com/...">
-<label>Kesit sayısı</label>
-<input id="count" type="number" min="1" max="10" value="3">
-<button onclick="startLink()">🔗 Linkten Kesit Oluştur</button>
+<p class="hint">Linki yapıştırıp aşağıdaki tek butona basman yeterli.</p>
 </div>
 
-<div class="card">
-<h2>2️⃣ Video yükle</h2>
-<p class="small">iPhone'dan videoyu GitHub Issue'ya ekleyip gönder. İşlem otomatik başlayacak.</p>
+<div id="filePanel" class="source-panel">
+<p class="small">iPhone'daki videonu GitHub Issue ekranına ekle. Video yüklendikten sonra Issue'yu gönder; işlem otomatik başlayacak.</p>
 <button class="secondary" onclick="openIssue()">📱 Video Seç / Yükle</button>
 </div>
+</div>
 
 <div class="card">
-<h2>3️⃣ Video düzeni</h2>
+<h2>2️⃣ Kesit ayarları</h2>
+<label>Kesit sayısı</label>
+<input id="count" type="number" min="1" max="10" value="3">
+
 <label>Webcam / ekran düzeni</label>
 <select id="layout">
-<option value="auto">Otomatik (önerilen)</option>
-<option value="center">Sadece 9:16 merkez kırpma</option>
-<option value="webcam-top">Webcam üstte — ekranın 1/3'ü</option>
+<option value="auto">🤖 Otomatik — önerilen</option>
+<option value="center">9:16 merkez kırpma</option>
+<option value="webcam-top">🎥 Webcam üstte — ekranın 1/3'ü</option>
 </select>
-<p class="hint">Otomatik modda yüz/webcam ipuçları aranır; webcam düzeni uygunsa üst 1/3'e alınır.</p>
+<p class="hint">Otomatik modda yüz/webcam ipuçları aranır. Uygun görünürse webcam üst 1/3'e yerleştirilir.</p>
 
 <label>Altyazı stili</label>
 <select id="subtitle">
@@ -46,34 +76,51 @@ main{max-width:620px;margin:auto}.hero{padding:10px 4px 20px}h1{font-size:34px;m
 <option value="yellow">🟡 Sarı vurgu</option>
 <option value="minimal">Minimal — küçük</option>
 </select>
+</div>
 
-<button onclick="startLink()">▶️ Seçimleri Uygula ve Başlat</button>
+<div class="card">
+<button class="primary" onclick="start()">🚀 KESİTLERİ OLUŞTUR</button>
+<div id="status" class="status"></div>
 </div>
 
 <div class="card">
 <p class="small"><span class="pill">Ücretsiz</span><span class="pill">Whisper</span><span class="pill">FFmpeg</span><span class="pill">GitHub Actions</span></p>
 <p class="small">Claude/OpenAI API zorunlu değil. YouTube altyazısı yoksa yerel Whisper kullanılır.</p>
 </div>
+</main>
 
 <script>
-function buildBody(source){
- const u=document.getElementById('url').value.trim();
- const n=document.getElementById('count').value;
- const layout=document.getElementById('layout').value;
- const subtitle=document.getElementById('subtitle').value;
- return source+'\n\nClip count: '+n+'\nLayout: '+layout+'\nSubtitle style: '+subtitle;
+let source='link';
+
+function setSource(next){
+ source=next;
+ document.getElementById('linkTab').classList.toggle('active',next==='link');
+ document.getElementById('fileTab').classList.toggle('active',next==='file');
+ document.getElementById('linkPanel').classList.toggle('active',next==='link');
+ document.getElementById('filePanel').classList.toggle('active',next==='file');
 }
-function startLink(){
- const u=document.getElementById('url').value.trim();
- if(!u)return alert('YouTube linki gir.');
- const body=buildBody(u);
- location.href='https://github.com/halym700-source/ai-viral-v2/issues/new?title=%5BKesit%20Studio%5D%20YouTube&body='+encodeURIComponent(body);
+
+function settings(){
+ return '\n\nClip count: '+document.getElementById('count').value+
+ '\nLayout: '+document.getElementById('layout').value+
+ '\nSubtitle style: '+document.getElementById('subtitle').value;
 }
+
+function start(){
+ if(source==='link'){
+   const u=document.getElementById('url').value.trim();
+   if(!u){alert('YouTube linki gir.');return;}
+   location.href='https://github.com/halym700-source/ai-viral-v2/issues/new?title=%5BKesit%20Studio%5D%20YouTube&body='+encodeURIComponent(u+settings());
+ }else{
+   openIssue();
+ }
+}
+
 function openIssue(){
- const body=buildBody('VIDEO ATTACHMENT');
- location.href='https://github.com/halym700-source/ai-viral-v2/issues/new?title=%5BKesit%20Studio%5D%20Video%20Upload&body='+encodeURIComponent(body+'\n\nVideoyu bu Issue alanına ekle. iPhone\'dan video/fotoğraf ekleme düğmesini kullan, yükleme bittikten sonra Issue\'yu gönder.');
+ const body='VIDEO ATTACHMENT'+settings()+
+ '\n\nVideoyu bu Issue alanına ekle. iPhone\'dan video/fotoğraf ekleme düğmesini kullan. Yükleme bittikten sonra Issue\'yu gönder.';
+ location.href='https://github.com/halym700-source/ai-viral-v2/issues/new?title=%5BKesit%20Studio%5D%20Video%20Upload&body='+encodeURIComponent(body);
 }
 </script>
-</main>
 </body>
 </html>
