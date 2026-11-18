@@ -46,9 +46,24 @@ async function loadRuns(){
      const div=document.createElement('div');div.className='item';
      const conclusion=run.status==='completed'?(run.conclusion||'completed'):run.status;
      div.innerHTML='<strong>'+escapeHtml(run.name)+'</strong><p class="small">'+escapeHtml(conclusion)+' · '+new Date(run.created_at).toLocaleString('tr-TR')+'</p><a href="'+run.html_url+'" target="_blank" rel="noopener">GitHub işlem sayfasını aç</a>';
+     fetchArtifacts(run.id,div);
      list.appendChild(div);
    });
  }catch(e){status.textContent='Sonuçlar alınamadı: '+e.message;}
+}
+async function fetchArtifacts(runId, parent){
+ try{
+   const r=await fetch('https://api.github.com/repos/'+OWNER+'/'+REPO+'/actions/runs/'+runId+'/artifacts');
+   if(!r.ok)return;
+   const data=await r.json();
+   (data.artifacts||[]).forEach(a=>{
+     if(a.expired)return;
+     const link=document.createElement('a');
+     link.href=a.archive_download_url;link.target='_blank';link.rel='noopener';
+     link.textContent='⬇️ '+a.name+' ('+Math.round(a.size_in_bytes/1024/1024*10)/10+' MB)';
+     parent.appendChild(link);
+   });
+ }catch(e){}
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
 loadRuns();
