@@ -12,6 +12,41 @@ on:
         required: true
         default: "5"
         type: string
+      youtube_url:
+        description: "YouTube URL"
+        required: false
+        default: ""
+        type: string
+      layout:
+        description: "Layout"
+        required: false
+        default: "auto"
+        type: string
+      subtitle_style:
+        description: "Subtitle style"
+        required: false
+        default: "bold"
+        type: string
+      source_url:
+        description: "Netlify uploaded video source URL"
+        required: false
+        default: ""
+        type: string
+      upload_id:
+        description: "Netlify upload ID"
+        required: false
+        default: ""
+        type: string
+      chunk_count:
+        description: "Number of uploaded chunks"
+        required: false
+        default: "0"
+        type: string
+      filename:
+        description: "Uploaded filename"
+        required: false
+        default: "uploaded_video.mp4"
+        type: string
   issues:
     types: [opened]
   push:
@@ -49,13 +84,30 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           DISPATCH_URL: ${{ inputs.youtube_url }}
           DISPATCH_COUNT: ${{ inputs.clip_count }}
+          DISPATCH_SOURCE_URL: ${{ inputs.source_url }}
+          DISPATCH_UPLOAD_ID: ${{ inputs.upload_id }}
+          DISPATCH_CHUNK_COUNT: ${{ inputs.chunk_count }}
+          DISPATCH_FILENAME: ${{ inputs.filename }}
+          DISPATCH_YOUTUBE_URL: ${{ inputs.youtube_url }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
           if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            echo "YOUTUBE_URL=$DISPATCH_URL" >> "$GITHUB_ENV"
+            if [ -n "$DISPATCH_YOUTUBE_URL" ]; then
+              echo "YOUTUBE_URL=$DISPATCH_YOUTUBE_URL" >> "$GITHUB_ENV"
+            elif [ -n "$DISPATCH_SOURCE_URL" ]; then
+              mkdir -p work
+              echo "Downloading uploaded video in chunks..."
+              for i in $(seq 0 $((DISPATCH_CHUNK_COUNT - 1))); do
+                curl -L --fail --retry 3 "$DISPATCH_SOURCE_URL&chunk=$i" >> work/uploaded_video
+              done
+              echo "VIDEO_FILE=$GITHUB_WORKSPACE/work/uploaded_video" >> "$GITHUB_ENV"
+            else
+              echo "No YouTube URL or uploaded video source." >&2
+              exit 1
+            fi
             echo "CLIP_COUNT=$DISPATCH_COUNT" >> "$GITHUB_ENV"
-            echo "LAYOUT=auto" >> "$GITHUB_ENV"
-            echo "SUBTITLE_STYLE=bold" >> "$GITHUB_ENV"
+            echo "LAYOUT=${{ inputs.layout || 'auto' }}" >> "$GITHUB_ENV"
+            echo "SUBTITLE_STYLE=${{ inputs.subtitle_style || 'bold' }}" >> "$GITHUB_ENV"
           elif [ "$EVENT_NAME" = "issues" ]; then
             # Prefer a GitHub user-attachment over any other URL in the issue.
             FILE_URL=$(printf "%s\n" "$ISSUE_BODY" | grep -Eo "https?://[^ )\n]*user-attachments/assets/[^ )\n]+" | head -n 1 || true)
