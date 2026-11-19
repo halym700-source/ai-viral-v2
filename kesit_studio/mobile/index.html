@@ -4,171 +4,91 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#09090b">
-<title>Kesit Studio</title>
+<title>OpenShorts — Kesit Studio</title>
 <style>
 *{box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#09090b;color:#fff;margin:0;padding:18px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#09090b;color:#fff;margin:0;padding:20px}
 main{max-width:620px;margin:auto}
-.hero{padding:12px 4px 18px}
-h1{font-size:34px;margin:0 0 8px;letter-spacing:-.5px}
+.hero{text-align:center;padding:28px 8px 20px}
+h1{font-size:34px;margin:0 0 10px}
 p{color:#a1a1aa;line-height:1.45}
-.card{background:#18181b;border:1px solid #27272a;border-radius:22px;padding:18px;margin:14px 0}
-label{display:block;font-size:14px;color:#d4d4d8;margin:14px 0 6px}
-input,select,button{width:100%;padding:15px;border-radius:14px;border:0;font-size:16px}
-input,select{background:#fff;color:#111}
-button{background:#2563eb;color:#fff;font-weight:800;margin-top:14px}
-.secondary{background:#27272a}
-.primary{background:linear-gradient(135deg,#2563eb,#7c3aed);font-size:18px;padding:17px}
-.source{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-.source button{margin:0;background:#27272a}
-.source button.active{background:#2563eb}
-.source-panel{display:none}
-.source-panel.active{display:block}
-.small{font-size:13px}
-.hint{font-size:12px;color:#71717a}
-.pill{display:inline-block;background:#27272a;border-radius:999px;padding:6px 10px;font-size:12px;margin:3px}
-.status{display:none;margin-top:12px;padding:12px;border-radius:12px;background:#27272a;color:#d4d4d8;font-size:13px}
+.card{background:#18181b;border:1px solid #27272a;border-radius:22px;padding:20px;margin:14px 0}
+label{display:block;font-size:14px;color:#d4d4d8;margin-bottom:8px}
+input,button{width:100%;padding:16px;border-radius:14px;border:0;font-size:16px}
+input{background:#fff;color:#111}
+button{background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;font-weight:800;margin-top:14px;font-size:18px}
+.status{display:none;margin-top:14px;padding:13px;border-radius:12px;background:#27272a;color:#d4d4d8;font-size:14px}
+a{display:block;text-align:center;text-decoration:none;background:#27272a;color:#fff;padding:15px;border-radius:14px;font-weight:800}
+.hint{font-size:12px;color:#71717a;margin-bottom:0}
 </style>
 </head>
 <body>
 <main>
 <section class="hero">
-<h1>🎬 Kesit Studio</h1>
-<p>Tek ekrandan video veya YouTube linkini gönder. Kesit sayısını, webcam düzenini ve altyazı stilini seç.</p>
+<h1>🎬 OpenShorts</h1>
+<p>Uzun videonu otomatik olarak kısa, dikey kesitlere dönüştür.</p>
 </section>
 
 <div class="card">
-<h2>1️⃣ Videonu seç</h2>
-<div class="source">
-<button id="linkTab" class="active" onclick="setSource('link')">🔗 YouTube</button>
-<button id="fileTab" onclick="setSource('file')">📱 Video Yükle</button>
-</div>
-
-<div id="linkPanel" class="source-panel active">
-<label>YouTube / canlı yayın linki</label>
-<input id="url" type="url" placeholder="https://youtube.com/...">
-<p class="hint">Linki yapıştırıp aşağıdaki tek butona basman yeterli.</p>
-</div>
-
-<div id="filePanel" class="source-panel">
-<label>Videonu seç</label>
-<input id="videoFile" type="file" accept="video/*">
-<p class="hint">Video doğrudan Netlify'a parçalar halinde yüklenir; GitHub Issue açman gerekmez.</p>
-<div id="uploadProgress" class="status"></div>
-</div>
-</div>
-
-<div class="card">
-<h2>2️⃣ Kesit ayarları</h2>
-<label>Kesit sayısı</label>
-<input id="count" type="number" min="1" max="10" value="3">
-
-<label>Webcam / ekran düzeni</label>
-<select id="layout">
-<option value="auto">🤖 Otomatik — önerilen</option>
-<option value="center">9:16 merkez kırpma</option>
-<option value="webcam-top">🎥 Webcam üstte — ekranın 1/3'ü</option>
-</select>
-<p class="hint">Otomatik modda yüz/webcam ipuçları aranır. Uygun görünürse webcam üst 1/3'e yerleştirilir.</p>
-
-<label>Altyazı stili</label>
-<select id="subtitle">
-<option value="bold">🔥 Bold — beyaz / kalın</option>
-<option value="classic">Klasik — beyaz</option>
-<option value="yellow">🟡 Sarı vurgu</option>
-<option value="minimal">Minimal — küçük</option>
-</select>
-</div>
-
-<div class="card">
-<button class="primary" onclick="start()">🚀 KESİTLERİ OLUŞTUR</button>
+<label for="url">YouTube video linki</label>
+<input id="url" type="url" inputmode="url" autocomplete="off"
+       placeholder="https://youtube.com/watch?v=...">
+<p class="hint">Linki yapıştır ve oluştur'a bas. Gerisini sistem yapacak.</p>
+<button onclick="start()">🚀 KESİTLERİ OLUŞTUR</button>
 <div id="status" class="status"></div>
 </div>
 
-<div class="card"><a href="/results" style="display:block;text-align:center;text-decoration:none;background:#27272a;color:#fff;padding:15px;border-radius:14px;font-weight:800">📦 Oluşan Kesitler / İşlem Durumu</a></div>
-
 <div class="card">
-<p class="small"><span class="pill">Ücretsiz</span><span class="pill">Whisper</span><span class="pill">FFmpeg</span><span class="pill">GitHub Actions</span></p>
-<p class="small">Claude/OpenAI API zorunlu değil. YouTube altyazısı yoksa yerel Whisper kullanılır.</p>
+<a href="/results">📦 Kesitler / İşlem Durumu</a>
 </div>
 </main>
 
 <script>
-let source='link';
-
-function setSource(next){
- source=next;
- document.getElementById('linkTab').classList.toggle('active',next==='link');
- document.getElementById('fileTab').classList.toggle('active',next==='file');
- document.getElementById('linkPanel').classList.toggle('active',next==='link');
- document.getElementById('filePanel').classList.toggle('active',next==='file');
-}
-
-function settings(){
- return '\n\nClip count: '+document.getElementById('count').value+
- '\nLayout: '+document.getElementById('layout').value+
- '\nSubtitle style: '+document.getElementById('subtitle').value;
+function setStatus(msg){
+  const el=document.getElementById('status');
+  el.style.display='block';
+  el.textContent=msg;
 }
 
 async function start(){
- if(source==='link'){
-   const u=document.getElementById('url').value.trim();
-   if(!u){alert('YouTube linki gir.');return;}
-   setStatus('YouTube isteği başlatılıyor…');
-   try{
-     const r=await fetch('/.netlify/functions/upload?action=init',{
-       method:'POST',headers:{'content-type':'application/json'},
-       body:JSON.stringify({filename:'youtube.txt',size:0,chunks:0,youtubeUrl:u,clipCount:Number(document.getElementById('count').value),layout:document.getElementById('layout').value,subtitleStyle:document.getElementById('subtitle').value})
-     });
-     const j=await r.json();
-     if(!r.ok) throw new Error(j.error||'İstek başlatılamadı');
-     const run=await fetch('/.netlify/functions/upload?action=finish&id='+encodeURIComponent(j.uploadId),{method:'POST'});
-     const runJson=await run.json();
-     if(!run.ok) throw new Error(runJson.error||runJson.detail||'İşlem başlatılamadı');
-     setStatus('✅ İşlem başlatıldı. Sonuçlar sayfasından takip edebilirsin.');
-     setTimeout(()=>location.href='/results?refresh=1',700);
-   }catch(e){setStatus('❌ '+e.message);}
- }else{
-   await uploadVideo();
- }
-}
-function setStatus(msg){
- const el=document.getElementById('status');
- const up=document.getElementById('uploadProgress');
- [el,up].forEach(x=>{if(x){x.style.display='block';x.textContent=msg;}});
-}
-async function uploadVideo(){
- const file=document.getElementById('videoFile').files[0];
- if(!file){alert('Video seç.');return;}
- const chunkSize=4*1024*1024;
- const total=Math.ceil(file.size/chunkSize);
- setStatus('Yükleme hazırlanıyor…');
- try{
-   const init=await fetch('/.netlify/functions/upload?action=init',{
-     method:'POST',headers:{'content-type':'application/json'},
-     body:JSON.stringify({filename:file.name,size:file.size,chunks:total,clipCount:Number(document.getElementById('count').value),layout:document.getElementById('layout').value,subtitleStyle:document.getElementById('subtitle').value})
-   });
-   const ij=await init.json(); if(!init.ok) throw new Error(ij.error||'Yükleme başlatılamadı');
-   for(let i=0;i<total;i++){
-     const part=file.slice(i*chunkSize,Math.min(file.size,(i+1)*chunkSize));
-     let ok=false;
-     for(let attempt=1;attempt<=3&&!ok;attempt++){
-       const r=await fetch('/.netlify/functions/upload?action=chunk',{
-         method:'POST',headers:{'x-upload-id':ij.uploadId,'x-chunk-index':String(i)},body:part
-       });
-       ok=r.ok;
-       if(!ok && attempt===3) throw new Error('Parça '+(i+1)+' yüklenemedi');
-     }
-     setStatus('Yükleniyor: '+Math.round(((i+1)/total)*100)+'%');
-   }
-   setStatus('Video yüklendi. İşlem başlatılıyor…');
-   const fin=await fetch('/.netlify/functions/upload?action=finish&id='+encodeURIComponent(ij.uploadId),{method:'POST'});
-   const fj=await fin.json(); if(!fin.ok) throw new Error(fj.error||fj.detail||'İşlem başlatılamadı');
-   setStatus('✅ İşlem başladı. Sonuçlar sayfasına geçiliyor…');
-   setTimeout(()=>location.href='/results?id='+encodeURIComponent(ij.uploadId),700);
- }catch(e){setStatus('❌ '+e.message);}
-}
+  const u=document.getElementById('url').value.trim();
+  if(!u){setStatus('❌ YouTube linki gir.');return;}
+  if(!/(youtube\.com|youtu\.be)/i.test(u)){
+    setStatus('❌ Geçerli bir YouTube linki gir.');
+    return;
+  }
 
+  setStatus('⏳ İşlem başlatılıyor…');
+  try{
+    const r=await fetch('/.netlify/functions/upload?action=init',{
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({
+        filename:'youtube.txt',
+        size:0,
+        chunks:0,
+        youtubeUrl:u,
+        clipCount:3,
+        layout:'auto',
+        subtitleStyle:'bold'
+      })
+    });
+    const j=await r.json();
+    if(!r.ok) throw new Error(j.error||'İstek başlatılamadı');
+
+    setStatus('⏳ Video işleme kuyruğuna alınıyor…');
+    const run=await fetch('/.netlify/functions/upload?action=finish&id='+encodeURIComponent(j.uploadId),{
+      method:'POST'
+    });
+    const runJson=await run.json();
+    if(!run.ok) throw new Error(runJson.error||runJson.detail||'İşlem başlatılamadı');
+
+    setStatus('✅ İşlem başladı. Kesitler hazır olduğunda sonuçlar sayfasında görünecek.');
+    setTimeout(()=>location.href='/results?refresh=1',900);
+  }catch(e){
+    setStatus('❌ '+e.message);
+  }
+}
 </script>
 </body>
 </html>
