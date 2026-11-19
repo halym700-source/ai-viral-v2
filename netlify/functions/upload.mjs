@@ -70,7 +70,7 @@ export default async (req) => {
     const job = await jobs.get(id, { type: "json" });
     if (!job) return json({ error: "Job not found" }, 404);
 
-    const token = Netlify.env.get("GITHUB_ACTIONS_TOKEN");
+    const token = process.env.GITHUB_ACTIONS_TOKEN || (typeof Netlify !== "undefined" && Netlify.env ? Netlify.env.get("GITHUB_ACTIONS_TOKEN") : "");
     if (!token) {
       await jobs.setJSON(id, { ...job, status: "waiting-for-token" });
       return json({
