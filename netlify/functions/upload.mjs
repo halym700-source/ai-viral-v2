@@ -4,7 +4,7 @@ const CHUNK_BYTES = 4 * 1024 * 1024;
 const JOB_STORE = "kesit-jobs";
 const CHUNK_STORE = "kesit-upload-chunks";
 const REPO = "halym700-source/ai-viral-v2";
-const WORKFLOW = "kesit_studio_free.yml";
+const WORKFLOW = "openshorts_free.yml";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
