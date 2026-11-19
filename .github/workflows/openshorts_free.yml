@@ -1,0 +1,176 @@
+name: OpenShorts - Free Clips
+
+on:
+  workflow_dispatch:
+    inputs:
+      youtube_url:
+        description: "YouTube URL"
+        required: false
+        default: ""
+        type: string
+      clip_count:
+        description: "Number of clips"
+        required: true
+        default: "3"
+        type: string
+      source_url:
+        description: "Netlify uploaded video source URL"
+        required: false
+        default: ""
+        type: string
+      upload_id:
+        description: "Netlify upload ID"
+        required: false
+        default: ""
+        type: string
+      chunk_count:
+        description: "Number of uploaded chunks"
+        required: false
+        default: "0"
+        type: string
+      filename:
+        description: "Uploaded filename"
+        required: false
+        default: "uploaded_video.mp4"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openshorts-${{ github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Docker Compose
+        run: docker compose version
+
+      - name: Download uploaded video
+        if: inputs.source_url != ''
+        env:
+          SOURCE_URL: ${{ inputs.source_url }}
+          CHUNK_COUNT: ${{ inputs.chunk_count }}
+        run: |
+          mkdir -p work
+          echo "Downloading uploaded video..."
+          for i in $(seq 0 $((CHUNK_COUNT - 1))); do
+            curl -L --fail --retry 3 "$SOURCE_URL&chunk=$i" >> work/uploaded_video
+          done
+          test -s work/uploaded_video
+
+      - name: Clone OpenShorts
+        run: |
+          git clone --depth 1 https://github.com/mutonby/openshorts.git openshorts
+
+      - name: Start OpenShorts backend
+        working-directory: openshorts
+        env:
+          LLM_PROVIDER: heuristic
+          BILLING_ENABLED: "0"
+          AUTO_CAPTIONS: "1"
+          AUTO_HOOK: "1"
+          WATERMARK: "0"
+          MAX_CONCURRENT_JOBS: "1"
+          JOB_RETENTION_SECONDS: "86400"
+        run: |
+          cat > .env <<EOF
+          LLM_PROVIDER=$LLM_PROVIDER
+          BILLING_ENABLED=$BILLING_ENABLED
+          AUTO_CAPTIONS=$AUTO_CAPTIONS
+          AUTO_HOOK=$AUTO_HOOK
+          WATERMARK=$WATERMARK
+          MAX_CONCURRENT_JOBS=$MAX_CONCURRENT_JOBS
+          JOB_RETENTION_SECONDS=$JOB_RETENTION_SECONDS
+          EOF
+          docker compose up -d --build backend
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/health/ready >/dev/null; then
+              echo "OpenShorts backend ready."
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose logs --tail=200 backend
+          exit 1
+
+      - name: Submit YouTube job
+        if: inputs.youtube_url != ''
+        env:
+          YOUTUBE_URL: ${{ inputs.youtube_url }}
+          CLIP_COUNT: ${{ inputs.clip_count }}
+        run: |
+          RESPONSE=$(curl -fsS -X POST http://127.0.0.1:8000/api/process \
+            -H "Content-Type: application/json" \
+            -d "$(python -c 'import json,os; print(json.dumps({"url":os.environ["YOUTUBE_URL"],"acknowledged":True,"target_clips":os.environ["CLIP_COUNT"],"captions":"1","auto_hook":"1"}))')")
+          echo "$RESPONSE" | tee process-response.json
+          JOB_ID=$(python -c 'import json; print(json.load(open("process-response.json"))["job_id"])')
+          echo "JOB_ID=$JOB_ID" >> "$GITHUB_ENV"
+
+      - name: Submit uploaded video job
+        if: inputs.source_url != ''
+        env:
+          CLIP_COUNT: ${{ inputs.clip_count }}
+        run: |
+          RESPONSE=$(curl -fsS -X POST http://127.0.0.1:8000/api/process \
+            -F "file=@$GITHUB_WORKSPACE/work/uploaded_video" \
+            -F "acknowledged=true" \
+            -F "target_clips=$CLIP_COUNT" \
+            -F "captions=1" \
+            -F "auto_hook=1")
+          echo "$RESPONSE" | tee process-response.json
+          JOB_ID=$(python -c 'import json; print(json.load(open("process-response.json"))["job_id"])')
+          echo "JOB_ID=$JOB_ID" >> "$GITHUB_ENV"
+
+      - name: Wait for OpenShorts
+        run: |
+          for i in $(seq 1 180); do
+            RESPONSE=$(curl -fsS "http://127.0.0.1:8000/api/status/$JOB_ID")
+            echo "$RESPONSE" > status.json
+            STATUS=$(python -c 'import json; print(json.load(open("status.json")).get("status",""))')
+            echo "OpenShorts status: $STATUS"
+            if [ "$STATUS" = "completed" ]; then
+              exit 0
+            fi
+            if [ "$STATUS" = "failed" ]; then
+              python - <<'PY'
+          import json
+          d=json.load(open("status.json"))
+          print("\n".join(d.get("logs",[])))
+          PY
+              exit 1
+            fi
+            sleep 20
+          done
+          echo "OpenShorts timed out."
+          exit 1
+
+      - name: Download clips ZIP
+        run: |
+          mkdir -p out
+          curl -fsS "http://127.0.0.1:8000/api/jobs/$JOB_ID/download-all" -o out/openshorts-clips.zip
+          unzip -o out/openshorts-clips.zip -d out/clips
+          cp status.json out/status.json
+          find out -maxdepth 3 -type f -print
+
+      - name: Upload OpenShorts artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openshorts-${{ github.run_id }}
+          path: |
+            out/clips/**/*.mp4
+            out/status.json
+            out/openshorts-clips.zip
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Show OpenShorts logs on failure
+        if: failure()
+        working-directory: openshorts
+        run: docker compose logs --tail=300 backend
