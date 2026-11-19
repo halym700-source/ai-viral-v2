@@ -123,7 +123,8 @@ async function start(){
      const j=await r.json();
      if(!r.ok) throw new Error(j.error||'İstek başlatılamadı');
      const run=await fetch('/.netlify/functions/upload?action=finish&id='+encodeURIComponent(j.uploadId),{method:'POST'});
-     if(!run.ok) throw new Error((await run.json()).error||'İşlem başlatılamadı');
+     const runJson=await run.json();
+     if(!run.ok) throw new Error(runJson.error||runJson.detail||'İşlem başlatılamadı');
      setStatus('✅ İşlem başlatıldı. Sonuçlar sayfasından takip edebilirsin.');
      setTimeout(()=>location.href='/results?refresh=1',700);
    }catch(e){setStatus('❌ '+e.message);}
@@ -132,7 +133,9 @@ async function start(){
  }
 }
 function setStatus(msg){
- const el=document.getElementById('uploadProgress'); if(el){el.style.display='block';el.textContent=msg;}
+ const el=document.getElementById('status');
+ const up=document.getElementById('uploadProgress');
+ [el,up].forEach(x=>{if(x){x.style.display='block';x.textContent=msg;}});
 }
 async function uploadVideo(){
  const file=document.getElementById('videoFile').files[0];
@@ -160,7 +163,7 @@ async function uploadVideo(){
    }
    setStatus('Video yüklendi. İşlem başlatılıyor…');
    const fin=await fetch('/.netlify/functions/upload?action=finish&id='+encodeURIComponent(ij.uploadId),{method:'POST'});
-   const fj=await fin.json(); if(!fin.ok) throw new Error(fj.error||'İşlem başlatılamadı');
+   const fj=await fin.json(); if(!fin.ok) throw new Error(fj.error||fj.detail||'İşlem başlatılamadı');
    setStatus('✅ İşlem başladı. Sonuçlar sayfasına geçiliyor…');
    setTimeout(()=>location.href='/results?id='+encodeURIComponent(ij.uploadId),700);
  }catch(e){setStatus('❌ '+e.message);}
