@@ -67,7 +67,7 @@ jobs:
 
       - name: Clone OpenShorts
         run: |
-          git clone --depth 1 https://github.com/mutonby/openshorts.git openshorts
+          git clone --depth 1 https://github.com/moha700m/OpenShorts.git openshorts
 
       - name: Start OpenShorts backend
         working-directory: openshorts
@@ -91,7 +91,7 @@ jobs:
           EOF
           docker compose up -d --build backend
           for i in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1:8000/health/ready >/dev/null; then
+            if curl -fsS http://127.0.0.1:8000/docs >/dev/null; then
               echo "OpenShorts backend ready."
               exit 0
             fi
@@ -107,8 +107,11 @@ jobs:
           CLIP_COUNT: ${{ inputs.clip_count }}
         run: |
           RESPONSE=$(curl -fsS -X POST http://127.0.0.1:8000/api/process \
-            -H "Content-Type: application/json" \
-            -d "$(python -c 'import json,os; print(json.dumps({"url":os.environ["YOUTUBE_URL"],"acknowledged":True,"target_clips":os.environ["CLIP_COUNT"],"captions":"1","auto_hook":"1"}))')")
+            -F "url=$YOUTUBE_URL" \
+            -F "acknowledged=true" \
+            -F "target_clips=$CLIP_COUNT" \
+            -F "captions=1" \
+            -F "auto_hook=1")
           echo "$RESPONSE" | tee process-response.json
           JOB_ID=$(python -c 'import json; print(json.load(open("process-response.json"))["job_id"])')
           echo "JOB_ID=$JOB_ID" >> "$GITHUB_ENV"
